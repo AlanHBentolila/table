@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TABLE: Your usual. For less.</title>
+<meta name="description" content="Prepay meal packs at the Miami restaurants you already go to, and every visit costs less.">
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* =========================================================
+   TOKENS (shared with app.html)
+   ========================================================= */
+:root{
+  --ink:#0B0B0B; --char:#161410; --char-2:#1F1C17;
+  --rule:rgba(247,241,227,.10); --rule-2:rgba(247,241,227,.20);
+  --gold:#D4AE6A; --gold-hi:#F3D79A; --gold-lo:#B8894E;
+  --cream:#F7F1E3; --cream-70:rgba(247,241,227,.70); --cream-50:rgba(247,241,227,.52); --cream-30:rgba(247,241,227,.30);
+  --paper:#F7F1E3; --paper-ink:#1B1712; --paper-dim:#6F675A;
+  --error:#F0957A;
+  --ease:cubic-bezier(.3,.8,.2,1);
+  --wrap:1180px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{font-family:'Poppins',system-ui,sans-serif;background:var(--ink);color:var(--cream);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+img{display:block;max-width:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}
+
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 32px}
+section{padding:120px 0}
+section + section{border-top:1px solid var(--rule)}
+
+h1{font-size:clamp(48px,7.4vw,96px);font-weight:600;line-height:1.02;letter-spacing:-.035em}
+h2{font-size:clamp(34px,4.4vw,56px);font-weight:600;line-height:1.08;letter-spacing:-.03em;max-width:16ch}
+h3{font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.lede{font-size:19px;line-height:1.6;color:var(--cream-70);max-width:44ch}
+.muted{color:var(--cream-50)}
+.small{font-size:14px;color:var(--cream-50)}
+.gold{color:var(--gold)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:54px;padding:0 28px;border-radius:999px;font-size:16px;font-weight:600;text-decoration:none;background:var(--gold);color:var(--ink);transition:background .15s,transform .1s;white-space:nowrap}
+.btn:hover{background:var(--gold-hi)}
+.btn:active{background:var(--gold-lo);transform:scale(.98)}
+.btn.line{background:none;color:var(--cream);box-shadow:inset 0 0 0 1px var(--rule-2)}
+.btn.line:hover{box-shadow:inset 0 0 0 1px var(--cream-50)}
+.btn.sm{height:42px;padding:0 20px;font-size:14.5px}
+.btn:disabled{background:var(--char-2);color:var(--cream-30);cursor:not-allowed}
+
+/* logo */
+.logo{--h:30px;height:var(--h);width:calc(var(--h)*2.844);overflow:hidden;display:block;position:relative;flex-shrink:0}
+.logo img{position:absolute;max-width:none;height:calc(var(--h)*1.719);left:calc(var(--h)*-.406);top:calc(var(--h)*-.3125);mix-blend-mode:lighten}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+header{position:sticky;top:0;z-index:1000;background:rgba(11,11,11,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--rule)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:72px;gap:24px}
+nav ul{display:flex;gap:30px;list-style:none}
+nav a{text-decoration:none;font-size:15px;color:var(--cream-70);transition:color .15s}
+nav a:hover,nav a.on{color:var(--cream)}
+.menu-btn{display:none;width:44px;height:44px;border-radius:50%;place-items:center;background:var(--char)}
+.head-cta{display:flex;align-items:center;gap:20px}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+.hero{padding:96px 0 120px}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:64px;align-items:center}
+.hero .lede{margin:28px 0 40px}
+.hero .ctas{display:flex;gap:12px;flex-wrap:wrap}
+.hero .fine{margin-top:22px}
+.hero-card{position:relative;padding:20px 0}
+.hero-card .pcard{transform:rotate(-4deg);max-width:470px;margin-left:auto}
+.hero-card .under{position:absolute;inset:auto 30px -6px auto;width:86%;max-width:430px;aspect-ratio:1.62;border-radius:24px;transform:rotate(5deg);background:var(--char-2);box-shadow:inset 0 0 0 1px var(--rule)}
+
+/* gold punch card */
+.pcard{position:relative;border-radius:24px;padding:28px 28px 24px;color:var(--ink);overflow:hidden;aspect-ratio:1.62;display:flex;flex-direction:column;
+  background:repeating-linear-gradient(100deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),linear-gradient(120deg,#F1D394 0%,#D4AE6A 38%,#C49A55 62%,#E6C584 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(0,0,0,.15),0 40px 60px -30px rgba(0,0,0,.9)}
+.pcard .top{display:flex;justify-content:space-between;align-items:flex-start}
+.pcard .name{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.pcard .sub{font-size:14px;color:rgba(11,11,11,.62);margin-top:4px}
+.pcard .logo{--h:22px}
+.pcard .holes{display:grid;grid-template-columns:repeat(10,1fr);gap:9px;margin-top:auto}
+.pcard .hole{aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(11,11,11,.45);position:relative}
+.pcard .hole::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ink);transform:scale(0)}
+.pcard .hole.used::after{transform:scale(1)}
+.pcard .hole.punch::after{animation:punch .55s 1s var(--ease) both}
+.pcard.press{animation:press .55s .95s var(--ease)}
+@keyframes punch{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes press{40%{translate:0 4px}}
+.pcard .foot{display:flex;justify-content:space-between;margin-top:18px;font-size:15px;color:rgba(11,11,11,.7)}
+.pcard .foot b{color:var(--ink);font-weight:600}
+
+/* =========================================================
+   HOW IT WORKS
+   ========================================================= */
+.head-row{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-bottom:64px;flex-wrap:wrap}
+.head-row .lede{max-width:38ch}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;list-style:none;counter-reset:step}
+.steps li{position:relative;padding-top:84px}
+.steps .n{position:absolute;top:0;left:0;width:56px;height:56px;border-radius:50%;background:var(--gold);color:var(--ink);display:grid;place-items:center;font-size:20px;font-weight:600}
+.steps .n.hole{background:none;color:var(--gold);box-shadow:inset 0 0 0 1.5px var(--gold)}
+.steps li::before{content:"";position:absolute;top:28px;left:72px;right:-40px;border-top:1.5px dashed var(--rule-2)}
+.steps li:last-child::before{display:none}
+.steps p{color:var(--cream-70);margin-top:10px;max-width:30ch}
+.steps .say{display:inline-block;margin-top:14px;padding:10px 16px;border-radius:6px;background:var(--paper);color:var(--paper-ink);font-weight:600;font-size:17px}
+.members{margin-top:80px;display:flex;justify-content:space-between;align-items:center;gap:32px;padding:32px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.members p{font-size:20px;max-width:46ch}
+
+/* =========================================================
+   RESTAURANTS + CALCULATOR
+   ========================================================= */
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+.field{margin-bottom:26px}
+.field > label,.field > .lab{display:flex;justify-content:space-between;font-size:15px;font-weight:500;margin-bottom:10px}
+.field .hint{font-size:13.5px;color:var(--cream-50);margin-top:8px}
+.input{width:100%;height:56px;border-radius:14px;background:var(--char);border:1px solid var(--rule);padding:0 18px;font-size:17px;color:var(--cream);transition:border-color .15s}
+.input:focus{border-color:var(--gold)}
+.input.bad{border-color:var(--error)}
+textarea.input{height:140px;padding:16px 18px;resize:vertical;line-height:1.5}
+select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--cream-50) 50%),linear-gradient(135deg,var(--cream-50) 50%,transparent 50%);background-position:calc(100% - 22px) 25px,calc(100% - 16px) 25px;background-size:6px 6px;background-repeat:no-repeat}
+.prefix{position:relative}
+.prefix span{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--cream-50)}
+.prefix .input{padding-left:36px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--char);border-radius:14px;padding:4px;border:1px solid var(--rule)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{height:48px;border-radius:11px;display:grid;place-items:center;font-weight:500;cursor:pointer;color:var(--cream-70);transition:background .15s,color .15s}
+.seg input:checked + label{background:var(--cream);color:var(--ink)}
+.seg input:focus-visible + label{outline:2px solid var(--gold);outline-offset:2px}
+input[type=range]{width:100%;appearance:none;height:28px;background:none}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--gold) var(--p,50%),var(--char-2) var(--p,50%))}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--char-2)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--gold)}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:24px;height:24px;border-radius:50%;background:var(--cream);margin-top:-10px;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border:none;border-radius:50%;background:var(--cream)}
+.stepper{display:flex;align-items:center;gap:0;border-radius:14px;background:var(--char);border:1px solid var(--rule);height:56px}
+.stepper button{width:56px;height:100%;font-size:22px;color:var(--cream-70)}
+.stepper button:hover{color:var(--cream)}
+.stepper input{flex:1;min-width:0;text-align:center;background:none;border:none;font-size:17px;height:100%}
+
+/* paper receipt */
+.paper{position:relative;background:var(--paper);color:var(--paper-ink);border-radius:8px 8px 0 0;padding:34px 32px 30px}
+.paper::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;background:linear-gradient(135deg,var(--paper) 50%,transparent 50%) 0 0/14px 10px,linear-gradient(225deg,var(--paper) 50%,transparent 50%) 0 0/14px 10px;background-repeat:repeat-x}
+.paper .ttl{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+.paper .ttl b{font-size:20px;font-weight:600}
+.paper .ttl span{font-size:13.5px;color:var(--paper-dim)}
+.paper hr{border:none;border-top:1.5px dashed rgba(27,23,18,.22);margin:18px 0}
+.ln{display:flex;align-items:baseline;gap:10px;padding:7px 0;font-size:16px}
+.ln .k{color:var(--paper-dim)}
+.ln .dots{flex:1;border-bottom:1.5px dotted rgba(27,23,18,.3);transform:translateY(-5px)}
+.ln .v{font-weight:500}
+.ln.big{font-size:19px}
+.ln.big .k{color:var(--paper-ink);font-weight:500}
+.ln.big .v{font-weight:600;font-size:22px}
+.paper .total{margin-top:6px;padding:18px 0 4px;border-top:2px solid var(--paper-ink);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.paper .total .k{font-weight:600}
+.paper .total .v{font-size:40px;font-weight:300;letter-spacing:-.03em;line-height:1}
+.paper .fine{font-size:13px;color:var(--paper-dim);margin-top:16px;line-height:1.5}
+
+.partner{display:grid;grid-template-columns:.85fr 1.15fr;gap:64px;margin-top:120px;padding-top:80px;border-top:1px solid var(--rule)}
+.partner ul{list-style:none;margin-top:28px}
+.partner li{padding:14px 0;border-bottom:1px solid var(--rule);color:var(--cream-70)}
+.partner li:first-child{border-top:1px solid var(--rule)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.err{font-size:14px;color:var(--error);margin-top:-14px;margin-bottom:18px;min-height:0}
+.done{padding:32px;border-radius:16px;background:var(--char);box-shadow:inset 0 0 0 1px var(--rule)}
+.done h3{margin-bottom:8px}
+
+/* =========================================================
+   MAP
+   ========================================================= */
+.mapgrid{display:grid;grid-template-columns:340px 1fr;gap:32px;align-items:stretch}
+.rlist{list-style:none;border-top:1px solid var(--rule)}
+.rlist button{display:flex;align-items:center;gap:16px;width:100%;padding:14px 0;border-bottom:1px solid var(--rule);text-align:left;transition:background .15s}
+.rlist button:hover .nm,.rlist button.on .nm{color:var(--gold)}
+.rlist .nm{font-weight:500;transition:color .15s}
+.rlist .kd{font-size:14px;color:var(--cream-50)}
+#map{height:560px;border-radius:20px;overflow:hidden;background:#1a1712;box-shadow:inset 0 0 0 1px var(--rule)}
+.leaflet-tile{filter:sepia(.25) brightness(1.05)}
+.leaflet-container{font-family:'Poppins',system-ui,sans-serif}
+.leaflet-control-attribution{background:rgba(11,11,11,.75)!important;color:var(--cream-50)!important;font-size:11px}
+.leaflet-control-attribution a{color:var(--cream-70)!important}
+.leaflet-bar a{background:var(--char)!important;color:var(--cream)!important;border-color:var(--rule)!important}
+.pin{width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 3px var(--ink),0 0 0 4.5px var(--gold),0 10px 20px rgba(0,0,0,.6);display:grid;place-items:center;transition:transform .2s var(--ease)}
+.pin span{width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--cream);font-size:11px;font-weight:600;display:grid;place-items:center}
+.pin.on{transform:scale(1.2)}
+.leaflet-popup-content-wrapper{background:var(--paper);color:var(--paper-ink);border-radius:8px;box-shadow:0 20px 40px rgba(0,0,0,.6)}
+.leaflet-popup-tip{background:var(--paper)}
+.leaflet-popup-content{margin:18px 20px;width:240px!important;font-size:14px;line-height:1.5}
+.leaflet-popup-content b.n{display:block;font-size:18px;font-weight:600}
+.leaflet-popup-content .kd{color:var(--paper-dim);font-size:13px}
+.leaflet-popup-content .ln{font-size:14px;padding:4px 0}
+.leaflet-popup-content a.go{display:inline-block;margin-top:10px;color:var(--paper-ink);font-weight:600}
+.leaflet-container a.leaflet-popup-close-button{color:var(--paper-dim)}
+
+/* pattern tiles (same as app) */
+.tile{width:48px;height:48px;border-radius:12px;flex-shrink:0;display:grid;place-items:center}
+.tile span{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--cream);font-size:12px;font-weight:600;display:grid;place-items:center}
+.p-matsuri{background:radial-gradient(circle at 50% 100%,transparent 5px,#E07A5F 6px 8px,transparent 9px 12px,#E07A5F 13px 15px,transparent 16px) 0 0/30px 15px,#2B1713}
+.p-mr01{background:conic-gradient(#B8402C 25%,#2A110C 0 50%,#B8402C 0 75%,#2A110C 0) 0 0/16px 16px}
+.p-pinecrest{background:radial-gradient(circle,#E9C17A 0 2.5px,transparent 3.5px) 0 0/16px 16px,conic-gradient(from 45deg,#7A5228 25%,#3A2410 0 50%,#7A5228 0 75%,#3A2410 0) 0 0/16px 16px}
+.p-sergios{background:repeating-linear-gradient(90deg,#B4602F 0 8px,#2A140A 8px 16px)}
+.p-pincho{background:repeating-linear-gradient(-32deg,#24160B 0 7px,#C9873A 7px 10px)}
+.p-coyo{background:linear-gradient(135deg,#7FA34A 25%,transparent 25%) -8px 0/16px 16px,linear-gradient(225deg,#7FA34A 25%,transparent 25%) -8px 0/16px 16px,linear-gradient(315deg,#E2BE4A 25%,transparent 25%) 0 0/16px 16px,linear-gradient(45deg,#E2BE4A 25%,transparent 25%) 0 0/16px 16px,#1C220F}
+
+/* =========================================================
+   TEAM + CONTACT
+   ========================================================= */
+.about{display:grid;grid-template-columns:1fr 1fr;gap:64px}
+.about .lede + .lede{margin-top:18px}
+.team{list-style:none;border-top:1px solid var(--rule)}
+.team li{display:flex;align-items:center;gap:18px;padding:18px 0;border-bottom:1px solid var(--rule)}
+.team .av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 1.5px var(--rule-2);color:var(--cream-50);font-weight:500}
+.team .nm{font-weight:500}
+.team .rl{font-size:14px;color:var(--cream-50)}
+.contact{display:grid;grid-template-columns:.85fr 1.15fr;gap:64px}
+.contact .mail{display:inline-block;margin-top:28px;font-size:24px;font-weight:500;color:var(--gold);text-decoration:none;border-bottom:1.5px solid rgba(212,174,106,.4)}
+.contact .mail:hover{border-bottom-color:var(--gold)}
+
+/* app band */
+.appband{padding:100px 0}
+.appband .wrap{display:flex;justify-content:space-between;align-items:center;gap:40px;flex-wrap:wrap}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+footer{border-top:1px solid var(--rule);padding:56px 0 40px}
+footer .top{display:flex;justify-content:space-between;align-items:flex-start;gap:40px;flex-wrap:wrap}
+footer ul{display:flex;gap:28px;list-style:none;flex-wrap:wrap}
+footer ul a{text-decoration:none;color:var(--cream-70);font-size:15px}
+footer ul a:hover{color:var(--cream)}
+footer .disc{margin-top:48px;padding-top:24px;border-top:1px solid var(--rule);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--cream-50)}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width:980px){
+  nav ul{display:none}
+  .menu-btn{display:grid}
+  nav.open ul{display:flex;flex-direction:column;gap:0;position:absolute;top:72px;left:0;right:0;background:var(--ink);border-bottom:1px solid var(--rule);padding:8px 32px 20px}
+  nav.open ul a{display:block;padding:14px 0;font-size:18px;color:var(--cream);border-bottom:1px solid var(--rule)}
+  .hero .wrap,.calc,.partner,.mapgrid,.about,.contact{grid-template-columns:1fr}
+  .hero-card{max-width:520px}
+  .hero-card .pcard{margin:0}
+  .steps{grid-template-columns:1fr;gap:40px}
+  .steps li{padding:0 0 0 84px}
+  .steps li::before{top:64px;bottom:-32px;left:28px;right:auto;border-top:none;border-left:1.5px dashed var(--rule-2)}
+  .partner{gap:40px}
+  #map{height:440px}
+  .mapgrid .rlist{order:2}
+}
+@media (max-width:600px){
+  .wrap{padding:0 20px}
+  section{padding:80px 0}
+  .hero{padding:56px 0 80px}
+  .head-cta .btn{display:none}
+  .grid2{grid-template-columns:1fr}
+  .pcard{padding:20px 20px 18px;border-radius:20px}
+  .pcard .name{font-size:22px}
+  .pcard .holes{gap:6px}
+  .pcard .foot{font-size:13px}
+  .pcard .foot .paid{display:none}
+  .paper{padding:26px 20px 24px}
+  .paper .total .v{font-size:32px}
+  .ln{font-size:15px}
+  #map{height:380px}
+  .contact .mail{font-size:20px}
+}
+</style>
+</head>
+<body id="top">
+
+<header>
+  <div class="wrap">
+    <a href="#top" aria-label="TABLE home"><span class="logo"><img src="logo.png" alt="table"></span></a>
+    <div class="head-cta">
+      <nav id="nav" aria-label="Main">
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#restaurants">For restaurants</a></li>
+          <li><a href="#map-section">Map</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+        <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
+          <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 1h16M1 7h16M1 13h16"/></svg>
+        </button>
+      </nav>
+      <a class="btn sm" href="app.html">Download the app</a>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Your usual.<br>For less.</h1>
+      <p class="lede">Prepay 5 or 10 meals at the Miami restaurants you already go to. Every visit costs less, and the restaurant gets paid up front.</p>
+      <div class="ctas">
+        <a class="btn" href="app.html">Download the app</a>
+        <a class="btn line" href="#restaurants">I own a restaurant</a>
+      </div>
+      <p class="small fine">Free to join. No subscription.</p>
+    </div>
+    <div class="hero-card" aria-label="Example pack: Matsuri, 6 of 10 meals left">
+      <div class="under" aria-hidden="true"></div>
+      <div class="pcard press" id="heroCard">
+        <div class="top">
+          <div><div class="name">Matsuri</div><div class="sub">Japanese, South Miami</div></div>
+          <span class="logo"><img src="logo.png" alt=""></span>
+        </div>
+        <div class="holes" aria-hidden="true">
+          <span class="hole used"></span><span class="hole used"></span><span class="hole used"></span><span class="hole punch"></span>
+          <span class="hole"></span><span class="hole"></span><span class="hole"></span><span class="hole"></span><span class="hole"></span><span class="hole"></span>
+        </div>
+        <div class="foot"><span><b id="heroLeft">7</b> of 10 meals left</span><span class="paid">Paid $100, normally $120</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how">
+  <div class="wrap">
+    <div class="head-row">
+      <h2>Three steps at the counter</h2>
+      <p class="lede">You don't change where you eat. You just pay for it ahead of time and keep the difference.</p>
+    </div>
+    <ol class="steps">
+      <li>
+        <span class="n">1</span>
+        <h3>Buy a pack</h3>
+        <p>Pick a restaurant in the app and buy 5 or 10 meals, usually 10 to 20% below the menu price.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Say the line</h3>
+        <p>When you order, tell the cashier:</p>
+        <span class="say">“I have a TABLE meal”</span>
+      </li>
+      <li>
+        <span class="n hole">3</span>
+        <h3>Scan and save</h3>
+        <p>Show the code in the app. One meal comes off your pack, and the savings add up on your Savings tab.</p>
+      </li>
+    </ol>
+    <div class="members">
+      <p>Example: 10 bowls at Matsuri are normally $120. The pack is $100, so each bowl costs you $10.</p>
+      <a class="btn" href="app.html">Try the app</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOR RESTAURANTS ============ -->
+<section id="restaurants">
+  <div class="wrap">
+    <div class="head-row">
+      <h2>Get paid before the meal is served</h2>
+      <p class="lede">Members prepay for 5 or 10 visits. You set the discount, TABLE keeps 8%, and the rest reaches you up front.</p>
+    </div>
+
+    <div class="calc">
+      <form id="calc" onsubmit="return false" aria-label="Pack calculator">
+        <h3 style="margin-bottom:24px">Work out a pack</h3>
+        <div class="field">
+          <label for="c-price">Normal price of one meal</label>
+          <div class="prefix"><span>$</span><input class="input" id="c-price" type="number" min="1" max="200" step="0.5" value="12" inputmode="decimal"></div>
+        </div>
+        <div class="field">
+          <span class="lab" id="c-size-lab">Pack size</span>
+          <div class="seg" role="radiogroup" aria-labelledby="c-size-lab">
+            <input type="radio" name="size" id="s5" value="5"><label for="s5">5 meals</label>
+            <input type="radio" name="size" id="s10" value="10" checked><label for="s10">10 meals</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="c-disc"><span>Discount you offer</span><span class="gold" id="c-disc-out">15%</span></label>
+          <input id="c-disc" type="range" min="10" max="20" step="1" value="15">
+          <p class="hint">Most partners choose between 10 and 20%.</p>
+        </div>
+        <div class="field">
+          <label for="c-packs">Packs sold per month</label>
+          <div class="stepper">
+            <button type="button" data-step="-5" aria-label="Fewer packs">−</button>
+            <input id="c-packs" type="number" min="0" max="2000" value="40" inputmode="numeric">
+            <button type="button" data-step="5" aria-label="More packs">+</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="paper" aria-live="polite">
+        <div class="ttl"><b>Your estimate</b><span id="r-sub">10-meal pack at $12</span></div>
+        <hr>
+        <div class="ln"><span class="k">Menu price for the pack</span><span class="dots"></span><span class="v" id="r-full">$120.00</span></div>
+        <div class="ln big"><span class="k">Member pays</span><span class="dots"></span><span class="v" id="r-member">$102.00</span></div>
+        <div class="ln"><span class="k">TABLE fee (8%)</span><span class="dots"></span><span class="v" id="r-fee">−$8.16</span></div>
+        <div class="ln big"><span class="k">You get up front, per pack</span><span class="dots"></span><span class="v" id="r-net">$93.84</span></div>
+        <hr>
+        <div class="ln"><span class="k">Packs per month</span><span class="dots"></span><span class="v" id="r-packs">40</span></div>
+        <div class="ln"><span class="k">Guaranteed visits per month</span><span class="dots"></span><span class="v" id="r-visits">400</span></div>
+        <div class="total"><span class="k">Monthly up-front cash</span><span class="v" id="r-month">$3,753.60</span></div>
+        <p class="fine">Estimate only. The member pays when they buy the pack. TABLE takes its 8% before paying you, and the rest arrives before any of those meals are served.</p>
+      </div>
+    </div>
+
+    <div class="partner" id="partner">
+      <div>
+        <h2 style="font-size:clamp(30px,3.4vw,44px)">Partner with TABLE</h2>
+        <p class="lede" style="margin-top:20px">Tell us about your restaurant. We'll set up your TABLE menu and your pack prices with you.</p>
+        <ul>
+          <li>No hardware. Your cashier checks the code in the member's app.</li>
+          <li>You choose which dishes are on the TABLE menu.</li>
+          <li>No monthly fee. TABLE only earns its 8% when a pack sells.</li>
+        </ul>
+      </div>
+      <div id="partnerWrap">
+        <form id="partnerForm" novalidate>
+          <div class="grid2">
+            <div class="field"><label for="p-rest">Restaurant name</label><input class="input" id="p-rest" autocomplete="organization" required></div>
+            <div class="field"><label for="p-area">Neighborhood</label>
+              <select class="input" id="p-area">
+                <option>Coral Gables</option><option>Brickell</option><option>Wynwood</option><option>South Miami</option><option>Coconut Grove</option><option>Downtown Miami</option><option>Somewhere else</option>
+              </select>
+            </div>
+            <div class="field"><label for="p-name">Your name</label><input class="input" id="p-name" autocomplete="name" required></div>
+            <div class="field"><label for="p-role">Your role</label><input class="input" id="p-role" placeholder="Owner, manager…"></div>
+            <div class="field"><label for="p-email">Email</label><input class="input" id="p-email" type="email" autocomplete="email" required></div>
+            <div class="field"><label for="p-phone">Phone</label><input class="input" id="p-phone" type="tel" autocomplete="tel"></div>
+          </div>
+          <p class="err" id="p-err" role="alert"></p>
+          <button class="btn" type="submit">Apply to partner</button>
+          <p class="small" style="margin-top:14px">This is a prototype form. Nothing is sent.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MAP ============ -->
+<section id="map-section">
+  <div class="wrap">
+    <div class="head-row">
+      <h2>Where you can use TABLE</h2>
+      <p class="lede">Example restaurants across Coral Gables, Brickell and Wynwood. Pick one to see its pack deal.</p>
+    </div>
+    <div class="mapgrid">
+      <ul class="rlist" id="rlist"></ul>
+      <div id="map" role="region" aria-label="Map of TABLE restaurants"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABOUT / TEAM ============ -->
+<section id="about">
+  <div class="wrap about">
+    <div>
+      <h2>Built by students who eat at the same five places</h2>
+      <p class="lede" style="margin-top:24px">TABLE started as a class project at the University of Miami. We noticed we were paying full price, every week, at restaurants we'd already decided to go to.</p>
+      <p class="lede">Prepaying for those meals saves members money and gives local restaurants cash before the month starts.</p>
+    </div>
+    <div>
+      <h3 style="margin-bottom:18px">The team, Group 1, BTE 210</h3>
+      <ul class="team">
+        <li><span class="av">1</span><div><div class="nm">Team member name</div><div class="rl">Role, such as co-founder and operations</div></div></li>
+        <li><span class="av">2</span><div><div class="nm">Team member name</div><div class="rl">Role, such as restaurant partnerships</div></div></li>
+        <li><span class="av">3</span><div><div class="nm">Team member name</div><div class="rl">Role, such as product and design</div></div></li>
+        <li><span class="av">4</span><div><div class="nm">Team member name</div><div class="rl">Role, such as marketing</div></div></li>
+        <li><span class="av">5</span><div><div class="nm">Team member name</div><div class="rl">Role, such as finance</div></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section id="contact">
+  <div class="wrap contact">
+    <div>
+      <h2>Get in touch</h2>
+      <p class="lede" style="margin-top:20px">Questions about packs, partnering or the project? Write to us and we'll reply within two business days.</p>
+      <a class="mail" href="mailto:hello@table-app.example">hello@table-app.example</a>
+    </div>
+    <div id="contactWrap">
+      <form id="contactForm" novalidate>
+        <div class="grid2">
+          <div class="field"><label for="m-name">Name</label><input class="input" id="m-name" autocomplete="name" required></div>
+          <div class="field"><label for="m-email">Email</label><input class="input" id="m-email" type="email" autocomplete="email" required></div>
+        </div>
+        <div class="field"><label for="m-msg">Message</label><textarea class="input" id="m-msg" required></textarea></div>
+        <p class="err" id="m-err" role="alert"></p>
+        <button class="btn" type="submit">Send message</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ============ APP BAND ============ -->
+<section class="appband">
+  <div class="wrap">
+    <h2 style="max-width:18ch">Your next usual is already on the menu.</h2>
+    <a class="btn" href="app.html">Download the app</a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="top">
+      <a href="#top" aria-label="Back to top"><span class="logo"><img src="logo.png" alt="table"></span></a>
+      <ul>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#restaurants">For restaurants</a></li>
+        <li><a href="#map-section">Map</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="app.html">App</a></li>
+      </ul>
+    </div>
+    <div class="disc">
+      <span>Restaurants shown are examples for this prototype, not current partners.</span>
+      <span>© 2026 TABLE, a BTE 210 class project</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ---------- data (same as the app) ---------- */
+const restaurants = [
+  { id:'matsuri',  name:'Matsuri',          kind:'Japanese',           area:'South Miami',  lat:25.7337, lng:-80.2896, price:12, packs:{5:52,10:100} },
+  { id:'mr01',     name:'Mr. 01',           kind:'Pizza',              area:'Brickell',     lat:25.7650, lng:-80.1925, price:16 },
+  { id:'pinecrest',name:'Pinecrest Bakery', kind:'Cuban bakery',       area:'near UM',      lat:25.7086, lng:-80.2867, price:9 },
+  { id:'sergios',  name:"Sergio's",         kind:'Cuban',              area:'Coral Gables', lat:25.7470, lng:-80.2610, price:15 },
+  { id:'pincho',   name:'Pincho',           kind:'Burgers and kabobs', area:'Coral Gables', lat:25.7502, lng:-80.2560, price:13 },
+  { id:'coyo',     name:'Coyo Taco',        kind:'Tacos',              area:'Wynwood',      lat:25.8007, lng:-80.1990, price:14 },
+];
+const packPrice = (r,n) => r.packs?.[n] ?? Math.round(r.price*n*.85);
+const usd = (n, cents=true) => '$' + n.toLocaleString('en-US',{minimumFractionDigits:cents?2:0,maximumFractionDigits:cents?2:0});
+const usd0 = n => '$' + (n % 1 ? n.toFixed(2) : n);
+
+/* ---------- mobile nav ---------- */
+const nav = document.getElementById('nav'), menuBtn = document.getElementById('menuBtn');
+menuBtn.addEventListener('click', () => { const o = nav.classList.toggle('open'); menuBtn.setAttribute('aria-expanded', o); menuBtn.setAttribute('aria-label', o ? 'Close menu' : 'Open menu'); });
+nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { nav.classList.remove('open'); menuBtn.setAttribute('aria-expanded', false); }));
+
+/* highlight the section in view */
+const links = [...nav.querySelectorAll('a')];
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+}), { rootMargin:'-45% 0px -50% 0px' });
+['how','restaurants','map-section','about','contact'].forEach(id => io.observe(document.getElementById(id)));
+
+/* hero: one hole gets punched on load */
+setTimeout(() => { document.getElementById('heroLeft').textContent = '6'; }, 1200);
+
+/* ---------- calculator ---------- */
+const $ = id => document.getElementById(id);
+function calc(){
+  const price = Math.max(0, parseFloat($('c-price').value) || 0);
+  const n = +document.querySelector('input[name=size]:checked').value;
+  const disc = +$('c-disc').value;
+  const packs = Math.max(0, Math.round(parseFloat($('c-packs').value) || 0));
+  const full = price*n, member = full*(1 - disc/100), fee = member*.08, net = member - fee;
+  $('c-disc-out').textContent = disc + '%';
+  $('c-disc').style.setProperty('--p', ((disc-10)/10*100) + '%');
+  $('r-sub').textContent = `${n}-meal pack at ${usd0(price)}, ${disc}% off`;
+  $('r-full').textContent = usd(full);
+  $('r-member').textContent = usd(member);
+  $('r-fee').textContent = '−' + usd(fee);
+  $('r-net').textContent = usd(net);
+  $('r-packs').textContent = packs.toLocaleString('en-US');
+  $('r-visits').textContent = (packs*n).toLocaleString('en-US');
+  $('r-month').textContent = usd(net*packs);
+}
+$('calc').addEventListener('input', calc);
+document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
+  $('c-packs').value = Math.max(0, (parseInt($('c-packs').value) || 0) + +b.dataset.step); calc();
+}));
+calc();
+
+/* ---------- fake forms ---------- */
+const emailOk = v => /^\S+@\S+\.\S+$/.test(v);
+function check(fields, errEl){
+  document.querySelectorAll('.bad').forEach(e => e.classList.remove('bad'));
+  for (const [id, msg, test] of fields){
+    const el = $(id);
+    if (!(test ? test(el.value.trim()) : el.value.trim())){ el.classList.add('bad'); el.focus(); errEl.textContent = msg; return false; }
+  }
+  errEl.textContent = ''; return true;
+}
+$('partnerForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!check([['p-rest','Enter your restaurant name.'],['p-name','Enter your name.'],['p-email','Enter an email address, like you@restaurant.com.',emailOk]], $('p-err'))) return;
+  const rest = $('p-rest').value.trim(), who = $('p-name').value.trim().split(/\s+/)[0];
+  $('partnerWrap').innerHTML = `<div class="done" tabindex="-1" id="pDone"><h3>Application received for ${esc(rest)}</h3><p class="lede">Thanks, ${esc(who)}. We'll email ${esc($('p-email').value.trim())} within two business days to set up your TABLE menu.</p><p class="small" style="margin-top:14px">Prototype only: nothing was sent.</p></div>`;
+  $('pDone').focus();
+});
+$('contactForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!check([['m-name','Enter your name.'],['m-email','Enter an email address so we can reply.',emailOk],['m-msg','Write a message before sending.']], $('m-err'))) return;
+  $('contactWrap').innerHTML = `<div class="done" tabindex="-1" id="mDone"><h3>Message sent</h3><p class="lede">Thanks, ${esc($('m-name').value.trim().split(/\s+/)[0])}. We'll reply to ${esc($('m-email').value.trim())} within two business days.</p><p class="small" style="margin-top:14px">Prototype only: nothing was sent.</p></div>`;
+  $('mDone').focus();
+});
+function esc(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- map ---------- */
+const list = $('rlist');
+list.innerHTML = restaurants.map(r => `
+  <li><button data-id="${r.id}">
+    <span class="tile p-${r.id}"><span>${r.name[0]}</span></span>
+    <span><span class="nm">${r.name}</span><br><span class="kd">${r.kind}, ${r.area}</span></span>
+  </button></li>`).join('');
+
+function popupHTML(r){
+  const line = n => `<div class="ln"><span class="k">${n} meals</span><span class="dots"></span><span class="v">${usd0(packPrice(r,n))} <s style="color:var(--paper-dim);font-weight:400">${usd0(r.price*n)}</s></span></div>`;
+  return `<b class="n">${r.name}</b><span class="kd">${r.kind}, ${r.area}</span>
+    <div style="margin-top:10px">${line(10)}${line(5)}</div>
+    <a class="go" href="app.html">Buy a pack in the app</a>`;
+}
+
+if (window.L){
+  const map = L.map('map', { scrollWheelZoom:false, zoomControl:true }).setView([25.757, -80.243], 12);
+  // Esri Dark Gray Canvas: free, no API key, allowed from file:// and GitHub Pages
+  const esri = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  L.tileLayer(esri + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom:16,
+    attribution:'Tiles &copy; <a href="https://www.esri.com">Esri</a>, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  L.tileLayer(esri + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom:16, pane:'overlayPane' }).addTo(map);
+  const markers = {};
+  restaurants.forEach(r => {
+    const icon = L.divIcon({ className:'', html:`<div class="pin p-${r.id}"><span>${r.name[0]}</span></div>`, iconSize:[40,40], iconAnchor:[20,20], popupAnchor:[0,-22] });
+    const m = L.marker([r.lat, r.lng], { icon, title:r.name, alt:r.name }).addTo(map).bindPopup(popupHTML(r));
+    m.on('popupopen', () => select(r.id));
+    markers[r.id] = m;
+  });
+  function select(id){
+    list.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+    document.querySelectorAll('.pin').forEach(p => p.classList.toggle('on', p.classList.contains('p-' + id)));
+  }
+  list.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const r = restaurants.find(x => x.id === b.dataset.id);
+    map.flyTo([r.lat, r.lng], 14, { duration:.8 });
+    markers[r.id].openPopup();
+  });
+  map.on('click', () => map.scrollWheelZoom.enable());
+} else {
+  $('map').innerHTML = '<p class="lede" style="padding:32px">The map needs an internet connection to load. The restaurant list still shows every location.</p>';
+}
+</script>
+</body>
+</html>

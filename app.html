@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TABLE App Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   TOKENS
+   ========================================================= */
+:root{
+  --ink:#0B0B0B; --char:#161410; --char-2:#1F1C17;
+  --rule:rgba(247,241,227,.10); --rule-2:rgba(247,241,227,.20);
+  --gold:#D4AE6A; --gold-hi:#F3D79A; --gold-lo:#B8894E;
+  --cream:#F7F1E3; --cream-70:rgba(247,241,227,.70); --cream-50:rgba(247,241,227,.50); --cream-30:rgba(247,241,227,.30);
+  --paper:#F7F1E3; --paper-ink:#1B1712; --paper-dim:#6F675A;
+  --error:#F0957A;
+  --ease:cubic-bezier(.3,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Poppins',system-ui,sans-serif;color:var(--cream);background:#050505;display:flex;align-items:center;justify-content:center;overflow:hidden;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none;text-align:inherit}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}
+
+/* =========================================================
+   PHONE FRAME
+   ========================================================= */
+.stage{display:flex;flex-direction:column;align-items:center;gap:16px;transform-origin:center}
+.phone{width:390px;height:844px;border-radius:56px;position:relative;background:var(--ink);overflow:hidden;isolation:isolate;
+  box-shadow:0 0 0 10px #141414,0 0 0 11px #343434,0 0 0 12px #0e0e0e,0 40px 90px -20px rgba(0,0,0,.9)}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;background:#000;border-radius:20px;z-index:90}
+.statusbar{position:absolute;inset:0 0 auto;height:54px;display:flex;justify-content:space-between;align-items:center;padding:4px 32px 0 44px;font-size:15px;font-weight:600;z-index:80;pointer-events:none;background:linear-gradient(var(--ink) 70%,rgba(11,11,11,0))}
+.statusbar.clear{background:none}
+.statusbar .icons{display:flex;gap:6px;align-items:center}
+.home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--cream);z-index:95;pointer-events:none}
+.caption{font-size:12px;color:var(--cream-50)}
+
+/* =========================================================
+   SCREENS
+   ========================================================= */
+.viewport{position:absolute;inset:0;overflow:hidden}
+.screen{position:absolute;inset:0;background:var(--ink);display:flex;flex-direction:column}
+.scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:62px 24px 32px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.screen.tabs .scroll{padding-bottom:110px}
+.screen.bleed .scroll{padding-top:0}
+.dock{padding:14px 24px 34px;border-top:1px solid var(--rule);background:var(--ink)}
+.dock > * + *{margin-top:10px}
+.screen.tabs .dock{margin-bottom:86px;padding-bottom:14px}
+.screen.tabs:has(.dock) .scroll{padding-bottom:24px}
+
+.in-push{animation:inPush .42s var(--ease) both;z-index:2}
+.out-push{animation:outPush .42s var(--ease) both}
+.in-pop{animation:inPop .42s var(--ease) both}
+.out-pop{animation:outPop .42s var(--ease) both;z-index:2}
+.in-swap{animation:inSwap .2s ease both;z-index:2}
+.out-swap{animation:outSwap .2s ease both}
+@keyframes inPush{from{transform:translateX(100%)}}
+@keyframes outPush{to{transform:translateX(-30%);filter:brightness(.5)}}
+@keyframes inPop{from{transform:translateX(-30%);filter:brightness(.5)}}
+@keyframes outPop{to{transform:translateX(100%)}}
+@keyframes inSwap{from{opacity:0}}
+@keyframes outSwap{to{opacity:0}}
+
+/* =========================================================
+   TYPE
+   ========================================================= */
+h1{font-size:28px;font-weight:600;line-height:1.18;letter-spacing:-.02em}
+h1.xl{font-size:40px;line-height:1.08;letter-spacing:-.03em}
+h2{font-size:20px;font-weight:600;letter-spacing:-.01em}
+h3{font-size:16px;font-weight:600}
+.lede{font-size:15px;line-height:1.6;color:var(--cream-70);max-width:32ch}
+.muted{color:var(--cream-50)}
+.s{font-size:14px}
+.xs{font-size:12px;color:var(--cream-50)}
+.gold{color:var(--gold)}
+.num{font-weight:300;letter-spacing:-.04em;line-height:1}
+.strike{text-decoration:line-through;color:var(--cream-50)}
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:36px 0 12px}
+.link{color:var(--gold);font-size:14px;font-weight:500}
+
+/* =========================================================
+   CONTROLS
+   ========================================================= */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;border-radius:999px;font-size:16px;font-weight:600;background:var(--gold);color:var(--ink);transition:background .15s,transform .1s}
+.btn:hover{background:var(--gold-hi)}
+.btn:active{background:var(--gold-lo);transform:scale(.985)}
+.btn:disabled{background:var(--char-2);color:var(--cream-30);cursor:not-allowed;transform:none}
+.btn.line{background:none;color:var(--cream);box-shadow:inset 0 0 0 1px var(--rule-2)}
+.btn.line:hover{box-shadow:inset 0 0 0 1px var(--cream-50)}
+.btn.plain{background:none;color:var(--cream-70);height:44px;font-weight:500;font-size:15px}
+.btn.cream{background:var(--cream);color:var(--ink)}
+.btn.sm{height:42px;font-size:14px}
+.btn .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(11,11,11,.25);border-top-color:var(--ink);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.back{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--char);color:var(--cream)}
+.bar{display:flex;align-items:center;justify-content:space-between;height:44px;margin-bottom:20px}
+.bar .title{font-size:16px;font-weight:600}
+
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;color:var(--cream-70);margin:0 0 6px 2px}
+.input{width:100%;height:52px;border-radius:14px;background:var(--char);border:1px solid var(--rule);padding:0 16px;font-size:16px;color:var(--cream);transition:border-color .15s}
+.input::placeholder{color:var(--cream-30)}
+.input:focus{border-color:var(--gold)}
+.input.bad{border-color:var(--error)}
+.err{font-size:12.5px;color:var(--error);margin:6px 0 0 2px}
+
+.rows{border-top:1px solid var(--rule)}
+.row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--rule);width:100%}
+.row .grow{flex:1;min-width:0}
+.row .t{font-size:15.5px;font-weight:500;display:block}
+.row .d{font-size:13px;color:var(--cream-50);margin-top:1px}
+.row .r{text-align:right;flex-shrink:0}
+
+.radio{cursor:pointer}
+.radio .dot{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--cream-30);flex-shrink:0;display:grid;place-items:center;transition:box-shadow .15s}
+.radio .dot::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--gold);transform:scale(0);transition:transform .2s var(--ease)}
+.radio.on .dot{box-shadow:inset 0 0 0 1.5px var(--gold)}
+.radio.on .dot::after{transform:scale(1)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;margin:0 -24px;padding:0 24px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;height:36px;padding:0 16px;border-radius:999px;font-size:14px;color:var(--cream-70);box-shadow:inset 0 0 0 1px var(--rule-2)}
+.chip.on{background:var(--cream);color:var(--ink);box-shadow:none;font-weight:500}
+
+.switch{width:50px;height:30px;border-radius:999px;background:var(--char-2);position:relative;flex-shrink:0;transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--cream);transition:transform .25s var(--ease)}
+.switch[aria-checked="true"]{background:var(--gold)}
+.switch[aria-checked="true"]::after{transform:translateX(20px)}
+.switch:disabled{opacity:.6;cursor:default}
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+.logo{--h:26px;height:var(--h);width:calc(var(--h)*2.844);overflow:hidden;display:block;position:relative;flex-shrink:0}
+.logo img{position:absolute;height:calc(var(--h)*1.719);left:calc(var(--h)*-.406);top:calc(var(--h)*-.3125);mix-blend-mode:lighten}
+
+/* =========================================================
+   RESTAURANT TILES (patterns from each place's world)
+   ========================================================= */
+.tile{position:relative;border-radius:14px;overflow:hidden;flex-shrink:0;display:grid;place-items:center}
+.tile .mono{width:46%;aspect-ratio:1;border-radius:50%;background:var(--ink);display:grid;place-items:center;font-weight:600;color:var(--cream);box-shadow:0 0 0 2px rgba(11,11,11,.4)}
+.p-matsuri{background:radial-gradient(circle at 50% 100%,transparent 5px,#E07A5F 6px 8px,transparent 9px 12px,#E07A5F 13px 15px,transparent 16px) 0 0/30px 15px,#2B1713}
+.p-mr01{background:conic-gradient(#B8402C 25%,#2A110C 0 50%,#B8402C 0 75%,#2A110C 0) 0 0/22px 22px}
+.p-pinecrest{background:radial-gradient(circle,#E9C17A 0 3px,transparent 4px) 0 0/22px 22px,conic-gradient(from 45deg,#7A5228 25%,#3A2410 0 50%,#7A5228 0 75%,#3A2410 0) 0 0/22px 22px}
+.p-sergios{background:repeating-linear-gradient(90deg,#B4602F 0 13px,#2A140A 13px 26px)}
+.p-pincho{background:repeating-linear-gradient(-32deg,#24160B 0 11px,#C9873A 11px 14px)}
+.p-coyo{background:linear-gradient(135deg,#7FA34A 25%,transparent 25%) -11px 0/22px 22px,linear-gradient(225deg,#7FA34A 25%,transparent 25%) -11px 0/22px 22px,linear-gradient(315deg,#E2BE4A 25%,transparent 25%) 0 0/22px 22px,linear-gradient(45deg,#E2BE4A 25%,transparent 25%) 0 0/22px 22px,#1C220F}
+
+/* =========================================================
+   PACK CARD (the gold punch card)
+   ========================================================= */
+.pcard{position:relative;border-radius:22px;padding:20px 20px 18px;color:var(--ink);overflow:hidden;aspect-ratio:1.62;display:flex;flex-direction:column;
+  background:
+    repeating-linear-gradient(100deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),
+    linear-gradient(120deg,#F1D394 0%,#D4AE6A 38%,#C49A55 62%,#E6C584 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(0,0,0,.15),0 24px 40px -24px rgba(0,0,0,.9)}
+.pcard .top{display:flex;justify-content:space-between;align-items:flex-start}
+.pcard .name{font-size:21px;font-weight:600;letter-spacing:-.015em;line-height:1.15}
+.pcard .sub{font-size:12.5px;color:rgba(11,11,11,.62);margin-top:2px}
+.pcard .logo{opacity:.9}
+.pcard .holes{display:grid;grid-template-columns:repeat(10,1fr);gap:7px;margin-top:auto}
+.pcard .hole{aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(11,11,11,.45);position:relative}
+.pcard .hole::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ink);box-shadow:inset 0 2px 3px rgba(255,255,255,.08);transform:scale(0)}
+.pcard .hole.used::after{transform:scale(1)}
+.pcard .hole.punch::after{animation:punch .5s .35s var(--ease) both}
+.pcard.pressing{animation:press .5s .3s var(--ease)}
+@keyframes punch{0%{transform:scale(0)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes press{40%{transform:translateY(3px) scale(.99)}}
+.pcard .foot{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;font-size:13px;color:rgba(11,11,11,.7)}
+.pcard .foot b{font-size:15px;color:var(--ink);font-weight:600}
+.pcard.small{aspect-ratio:auto;padding:16px 16px 14px;border-radius:18px}
+.pcard.small .name{font-size:17px}
+.pcard.small .holes{margin-top:16px;gap:5px}
+
+.deck{display:flex;gap:14px;overflow-x:auto;margin:0 -24px;padding:0 24px 4px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.deck::-webkit-scrollbar{display:none}
+.slide{min-width:calc(100% - 22px);scroll-snap-align:center}
+.slide .acts{display:flex;gap:10px;margin-top:14px}
+.deck-dots{display:flex;gap:6px;justify-content:center;margin-top:16px}
+.deck-dots i{width:6px;height:6px;border-radius:50%;background:var(--cream-30);transition:all .2s}
+.deck-dots i.on{background:var(--gold);width:18px;border-radius:3px}
+
+/* =========================================================
+   PAPER (checks, tickets, receipts)
+   ========================================================= */
+.paper{position:relative;background:var(--paper);color:var(--paper-ink);border-radius:6px 6px 0 0;padding:22px 20px 18px;margin-bottom:10px}
+.paper::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;
+  background:linear-gradient(135deg,var(--paper) 50%,transparent 50%) 0 0/12px 8px,linear-gradient(225deg,var(--paper) 50%,transparent 50%) 0 0/12px 8px;
+  background-repeat:repeat-x}
+.paper .pl{display:flex;justify-content:space-between;gap:12px;font-size:14.5px;padding:5px 0}
+.paper .pl .k{color:var(--paper-dim)}
+.paper hr{border:none;border-top:1.5px dashed rgba(27,23,18,.22);margin:12px 0}
+.paper .tot{font-size:18px;font-weight:600}
+.paper .head{display:flex;gap:14px;align-items:center;margin-bottom:6px}
+.paper .strike{color:var(--paper-dim)}
+
+/* =========================================================
+   SCREEN-SPECIFIC
+   ========================================================= */
+/* sign up fan */
+.fan{position:relative;height:200px;margin:18px 0 26px}
+.fan .pcard{position:absolute;width:250px;padding:16px;border-radius:18px}
+.fan .pcard .name{font-size:17px}
+.fan .pcard .holes{gap:5px}
+.fan .f1{left:-6px;top:30px;transform:rotate(-8deg);filter:brightness(.72)}
+.fan .f2{left:48px;top:14px;transform:rotate(-2deg);filter:brightness(.86)}
+.fan .f3{left:100px;top:0;transform:rotate(5deg)}
+
+/* location map */
+.map{position:relative;height:270px;margin:6px -24px 26px;overflow:hidden}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+.map .you{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 6px rgba(212,174,106,.2);transform:translate(-50%,-50%)}
+.map .you::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid var(--gold);animation:ping 2.4s var(--ease) infinite}
+@keyframes ping{from{transform:scale(1);opacity:.8}to{transform:scale(4.5);opacity:0}}
+
+/* top of home */
+.loc{display:flex;align-items:center;gap:6px;height:36px;padding:0 14px 0 10px;border-radius:999px;background:var(--char);font-size:14px;font-weight:500}
+.loc svg{color:var(--gold)}
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:600;background:var(--cream);color:var(--ink);flex-shrink:0}
+
+/* restaurant */
+.band{height:236px;position:relative;margin:0 -24px}
+.band::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(11,11,11,.25),transparent 40%,var(--ink) 98%)}
+.band .back{position:absolute;top:56px;left:20px;z-index:2;background:rgba(11,11,11,.7)}
+.menu .mi{display:flex;align-items:baseline;gap:8px;padding:9px 0;font-size:15px}
+.menu .mi .lead{flex:1;border-bottom:1.5px dotted var(--cream-30);transform:translateY(-4px)}
+.note{padding:16px;border-radius:16px;background:var(--char);font-size:14px;line-height:1.55;color:var(--cream-70)}
+
+/* payment marks */
+.pm{width:42px;height:28px;border-radius:6px;display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0;letter-spacing:.02em;position:relative}
+.pm.visa{background:#1A1F71;color:#fff;font-style:italic;font-size:11px}
+.pm.mc{background:#222}
+.pm.mc::before,.pm.mc::after{content:"";position:absolute;width:13px;height:13px;border-radius:50%;top:7.5px}
+.pm.mc::before{background:#EB001B;left:9px}.pm.mc::after{background:#F79E1B;left:17px;mix-blend-mode:screen}
+.pm.amex{background:#2E77BB;color:#fff}
+.pm.card{background:var(--char-2);color:var(--cream-70)}
+.pm.apple{background:#000;color:#fff;box-shadow:inset 0 0 0 1px var(--rule-2);font-size:11px;font-weight:600}
+.pm.google{background:#fff;color:#3c4043;font-size:11px;font-weight:600}
+
+/* stripe-like card form */
+.cardform{border-radius:14px;border:1px solid var(--rule-2);background:var(--char);overflow:hidden}
+.cardform .cf{display:flex;align-items:center;height:52px;padding:0 16px;gap:10px}
+.cardform .cf + .cf,.cardform .split{border-top:1px solid var(--rule)}
+.cardform .split{display:flex}
+.cardform .split .cf{flex:1}
+.cardform .split .cf + .cf{border-top:none;border-left:1px solid var(--rule)}
+.cardform input{flex:1;min-width:0;height:100%;background:none;border:none;font-size:16px;color:var(--cream)}
+.cardform input::placeholder{color:var(--cream-30)}
+.cardform.bad{border-color:var(--error)}
+
+/* redeem ticket */
+.ticket{text-align:center;padding:24px 20px 20px}
+.ticket .say{font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.25;margin:4px 0 18px}
+.qr{width:184px;height:184px;margin:0 auto}
+.ticket .left{margin-top:16px;font-size:14px;color:var(--paper-dim)}
+.ticket .left b{color:var(--paper-ink);font-size:16px}
+
+/* savings */
+.ring{position:relative;width:236px;height:236px;margin:20px auto 0}
+.ring svg{transform:rotate(-90deg)}
+.ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .in .num{font-size:60px}
+.ring .arc{transition:stroke-dashoffset 1.3s var(--ease)}
+.pair{display:flex;margin-top:28px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.pair > div{flex:1;padding:16px 0}
+.pair > div + div{border-left:1px solid var(--rule);padding-left:20px}
+.pair .num{font-size:32px}
+.stamps{display:flex;justify-content:space-between}
+.stamp{width:72px;text-align:center;font-size:12px;color:var(--cream-50)}
+.stamp .c{width:58px;height:58px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 1.5px var(--rule-2);font-size:13px;font-weight:600;color:var(--cream-50)}
+.stamp.got .c{background:var(--gold);color:var(--ink);box-shadow:none}
+.stamp.got{color:var(--cream)}
+.meter{height:4px;border-radius:2px;background:var(--char-2);overflow:hidden;margin-top:10px}
+.meter i{display:block;height:100%;background:var(--gold)}
+
+/* account */
+.profile{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+.profile .avatar{width:64px;height:64px;font-size:22px}
+.group{margin-top:30px}
+.group > h3{font-size:13px;font-weight:500;color:var(--cream-50);margin-bottom:6px}
+.danger{color:var(--error)}
+
+/* tab bar */
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:86px;padding:8px 10px 26px;display:flex;background:var(--ink);border-top:1px solid var(--rule);z-index:60;transition:transform .35s var(--ease)}
+.tabbar.hidden{transform:translateY(100%)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;color:var(--cream-50)}
+.tab svg{width:24px;height:24px}
+.tab.on{color:var(--gold)}
+
+/* sheet + toast */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:100;opacity:0;pointer-events:none;transition:opacity .25s}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;border-radius:28px 28px 0 0;padding:12px 24px 36px;z-index:101;background:var(--char);transform:translateY(100%);transition:transform .4s var(--ease);scrollbar-width:none}
+.sheet.show{transform:none}
+.sheet .grab{width:36px;height:5px;border-radius:3px;background:var(--rule-2);margin:0 auto 20px}
+.toast{position:absolute;left:20px;right:20px;top:58px;z-index:110;padding:13px 16px;border-radius:14px;background:var(--cream);color:var(--ink);font-size:14px;font-weight:500;opacity:0;transform:translateY(-12px);transition:opacity .25s,transform .35s var(--ease);pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.empty{padding:28px 0 8px}
+.empty p{margin:8px 0 20px}
+.appear{animation:appear .6s var(--ease) both}
+@keyframes appear{from{opacity:0;transform:translateY(40px) rotate(-3deg)}}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="phone">
+    <div class="island"></div>
+    <div class="statusbar" id="statusbar">
+      <span>9:41</span>
+      <span class="icons">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="#F7F1E3"><rect y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" width="3" height="12" rx="1"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="#F7F1E3"><path d="M8 2.5c2.3 0 4.4.9 6 2.4l1.2-1.3A10.4 10.4 0 0 0 8 .7 10.4 10.4 0 0 0 .8 3.6L2 4.9a8.6 8.6 0 0 1 6-2.4Zm0 3.6c1.3 0 2.5.5 3.4 1.3l1.2-1.3A6.6 6.6 0 0 0 8 4.3a6.6 6.6 0 0 0-4.6 1.8l1.2 1.3c.9-.8 2.1-1.3 3.4-1.3Zm0 3.6c-.6 0-1.1.2-1.5.6L8 11.8l1.5-1.5c-.4-.4-.9-.6-1.5-.6Z"/></svg>
+        <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="22" height="12" rx="3.5" stroke="#F7F1E3" opacity=".5" fill="none"/><rect x="2" y="2" width="19" height="9" rx="2" fill="#F7F1E3"/><rect x="24" y="4.5" width="2" height="4" rx="1" fill="#F7F1E3" opacity=".5"/></svg>
+      </span>
+    </div>
+    <div class="viewport" id="viewport"></div>
+    <nav class="tabbar hidden" id="tabbar" aria-label="Main">
+      <button class="tab" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20h-5.5v-5.5h-5V20H4z"/></svg>Home</button>
+      <button class="tab" data-tab="explore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>Explore</button>
+      <button class="tab" data-tab="redeem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5z"/></svg>Redeem</button>
+      <button class="tab" data-tab="savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V13M10 20V8M16 20v-5M22 20H2"/></svg>Savings</button>
+    </nav>
+    <div class="scrim" id="scrim"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+    <div class="toast" id="toast" role="status"></div>
+    <div class="home-ind"></div>
+  </div>
+  <div class="caption">TABLE app prototype. All data is made up.</div>
+</div>
+
+<script>
+/* =========================================================
+   FAKE DATA
+   ========================================================= */
+const restaurants = [
+  { id:'matsuri',  name:'Matsuri',          kind:'Japanese', cat:'Japanese', area:'South Miami',  lat:25.7337, lng:-80.2896, price:12, disc:15, packPrices:{5:52,10:100},
+    menu:['Salmon poke bowl','Spicy tuna roll and miso','Chicken teriyaki bowl','Veggie roll combo'] },
+  { id:'mr01',     name:'Mr. 01',           kind:'Pizza', cat:'Pizza', area:'Brickell',         lat:25.7650, lng:-80.1925, price:16, disc:15,
+    menu:['Margherita pizza','Pepperoni pizza','Mushroom and truffle pizza','Caesar salad and garlic knots'] },
+  { id:'pinecrest',name:'Pinecrest Bakery', kind:'Cuban bakery', cat:'Cuban', area:'near UM', lat:25.7086, lng:-80.2867, price:9, disc:15,
+    menu:['Cuban sandwich and cafecito','Croqueta preparada','Three pastelitos and a cortadito','Breakfast plate'] },
+  { id:'sergios',  name:"Sergio's",         kind:'Cuban', cat:'Cuban', area:'Coral Gables',     lat:25.7470, lng:-80.2610, price:15, disc:15,
+    menu:['Palomilla steak','Ropa vieja','Pollo a la plancha','Vaca frita'] },
+  { id:'pincho',   name:'Pincho',           kind:'Burgers and kabobs', cat:'Burgers', area:'Coral Gables', lat:25.7502, lng:-80.2560, price:13, disc:15,
+    menu:['Classic burger and fries','Chicken pincho bowl','Steak pincho plate','Falafel bowl'] },
+  { id:'coyo',     name:'Coyo Taco',        kind:'Tacos', cat:'Tacos', area:'Wynwood',          lat:25.8007, lng:-80.1990, price:14, disc:15,
+    menu:['Three tacos al pastor','Chicken burrito bowl','Carne asada quesadilla','Three veggie tacos'] },
+];
+const R = id => restaurants.find(r => r.id === id);
+const packPrice   = (r,n) => r.packPrices?.[n] ?? Math.round(r.price*n*(1 - r.disc/100));
+const fullPrice   = (r,n) => r.price*n;
+const perMealSave = (r,n) => (fullPrice(r,n) - packPrice(r,n)) / n;
+
+const hoods = [
+  { name:'Coral Gables', lat:25.7215, lng:-80.2684 }, { name:'Brickell', lat:25.7617, lng:-80.1918 },
+  { name:'Wynwood', lat:25.8010, lng:-80.1994 }, { name:'South Miami', lat:25.7079, lng:-80.2939 },
+  { name:'Downtown Miami', lat:25.7743, lng:-80.1937 }, { name:'Coconut Grove', lat:25.7280, lng:-80.2410 },
+];
+const DEMO = { lat:25.7190, lng:-80.2700 }; // near UM, used when location is off or outside Miami
+
+const contacts = [
+  { name:'Sofia Martinez', handle:'sofiam' }, { name:'Diego Alvarez', handle:'diego.a' },
+  { name:'Maya Chen', handle:'mayac' }, { name:'Jordan Lee', handle:'jlee' }, { name:'Camila Reyes', handle:'cami.r' },
+];
+
+const state = {
+  user:{ name:'', email:'', username:'', password:'', address:{ line1:'1450 Ponce de Leon Blvd', line2:'Apt 3C', city:'Coral Gables, FL 33134' } },
+  loc:null,
+  cards:[ { id:'c1', brand:'Visa', last4:'4242', exp:'08/28' } ],
+  pay:'c1', tempCard:null,
+  packs:[ { rid:'matsuri', left:7, total:10 }, { rid:'pinecrest', left:2, total:5 } ],
+  savedMonth:46, mealsMonth:9,
+  activity:[
+    { text:'Meal at Matsuri', when:'Yesterday', amt:2 },
+    { text:'Meal at Pinecrest Bakery', when:'Monday', amt:1.35 },
+    { text:'Bought a 10-meal pack at Matsuri', when:'Nov 3', amt:0 },
+  ],
+  restId:null, size:10, redeemId:'matsuri', sendPack:null, sendTo:null,
+  lastBought:null, lastSent:null, cat:'All', q:'', addFrom:null, saveCard:true,
+};
+const milestones = [ {at:25,name:'Regular'}, {at:50,name:'Local'}, {at:100,name:'Insider'}, {at:200,name:'Legend'} ];
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const money = n => '$' + (Math.abs(n % 1) > .001 ? n.toFixed(2) : Math.round(n));
+const initials = s => s.trim().split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
+const first = () => state.user.name.trim().split(/\s+/)[0] || 'there';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const logo = h => `<span class="logo" style="--h:${h}px"><img src="logo.png" alt="table"></span>`;
+const packOf = rid => state.packs.find(p => p.rid === rid);
+const canBuy = rid => { const p = packOf(rid); return !p || p.left <= 2; };
+const totalLeft = () => state.packs.reduce((s,p) => s + p.left, 0);
+
+const ic = {
+  back:`<svg width="10" height="17" viewBox="0 0 10 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 1.5 1.5 8.5l7 7"/></svg>`,
+  chev:`<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="color:var(--cream-30);flex-shrink:0"><path d="m1 1 5 5-5 5"/></svg>`,
+  pin:`<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>`,
+  lock:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>`,
+  search:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>`,
+  plus:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+};
+
+function miles(a,b){
+  const t = d => d*Math.PI/180, dLat = t(b.lat-a.lat), dLng = t(b.lng-a.lng);
+  const h = Math.sin(dLat/2)**2 + Math.cos(t(a.lat))*Math.cos(t(b.lat))*Math.sin(dLng/2)**2;
+  return 7917.6*Math.asin(Math.sqrt(h));
+}
+const dist = r => state.loc ? miles(state.loc, r) : null;
+const distTxt = r => { const d = dist(r); return d == null ? r.area : d.toFixed(1) + ' mi'; };
+const nearest = list => [...list].sort((a,b) => (dist(a) ?? 0) - (dist(b) ?? 0));
+const hoodOf = p => hoods.reduce((b,n) => miles(p,n) < miles(p,b) ? n : b).name;
+
+const tile = (r, size=56) => `<div class="tile p-${r.id}" style="width:${size}px;height:${size}px;border-radius:${size>60?18:14}px"><span class="mono" style="font-size:${Math.round(size*.26)}px">${r.name[0]}</span></div>`;
+
+/* payment methods */
+const brandMark = b => b === 'Visa' ? '<span class="pm visa">VISA</span>' : b === 'Mastercard' ? '<span class="pm mc"></span>' : b === 'Amex' ? '<span class="pm amex">AMEX</span>' : '<span class="pm card">CARD</span>';
+function method(id){
+  if (id === 'apple')  return { mark:'<span class="pm apple">Pay</span>', label:'Apple Pay' };
+  if (id === 'google') return { mark:'<span class="pm google">G Pay</span>', label:'Google Pay' };
+  const c = id === 'temp' ? state.tempCard : state.cards.find(c => c.id === id);
+  if (!c) return method('apple');
+  return { mark:brandMark(c.brand), label:`${c.brand} ending ${c.last4}`, card:c };
+}
+const validPay = () => state.pay === 'apple' || state.pay === 'google' || (state.pay === 'temp' && state.tempCard) || state.cards.some(c => c.id === state.pay);
+
+/* the gold punch card */
+function packCard(p, { punch=-1, small=false, cls='' } = {}){
+  const r = R(p.rid), used = p.total - p.left;
+  const cols = 10;
+  const holes = Array.from({length:p.total}, (_,k) =>
+    `<span class="hole ${k < used && k !== punch ? 'used' : ''} ${k === punch ? 'punch' : ''}"></span>`).join('');
+  return `<div class="pcard ${small?'small':''} ${punch>=0?'pressing':''} ${cls}">
+    <div class="top"><div><div class="name">${r.name}</div><div class="sub">${r.kind}, ${r.area}</div></div>${logo(small?15:18)}</div>
+    <div class="holes" style="grid-template-columns:repeat(${cols},1fr)">${holes}</div>
+    <div class="foot"><span><b>${p.left}</b> of ${p.total} meals left</span><span>${distTxt(r)}</span></div>
+  </div>`;
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+const viewport = document.getElementById('viewport'), tabbar = document.getElementById('tabbar');
+const TABS = ['home','explore','redeem','savings'];
+let current = null, stack = [], screenEl = null;
+
+function build(name){
+  const [body, dock] = screens[name]().split('<!--dock-->');
+  const el = document.createElement('div');
+  el.className = 'screen' + (TABS.includes(name) ? ' tabs' : '') + (name === 'restaurant' ? ' bleed' : '');
+  el.innerHTML = `<div class="scroll">${body}</div>` + (dock ? `<div class="dock">${dock}</div>` : '');
+  return el;
+}
+function render(name, mode='swap'){
+  const prev = screenEl, el = build(name);
+  viewport.appendChild(el);
+  current = name; screenEl = el;
+  if (prev){
+    el.classList.add('in-'+mode); prev.classList.add('out-'+mode);
+    setTimeout(() => prev.remove(), 430);
+    el.addEventListener('animationend', e => { if (e.target === el) el.classList.remove('in-'+mode); });
+  }
+  tabbar.classList.toggle('hidden', !TABS.includes(name));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === name));
+  document.getElementById('statusbar').classList.toggle('clear', name === 'restaurant');
+  after[name]?.(el);
+}
+const push = name => { stack.push(current); render(name,'push'); };
+const back = () => render(stack.pop() || 'home', 'pop');
+const tabTo = name => { stack = []; if (name !== current) render(name,'swap'); else screenEl.querySelector('.scroll').scrollTo({top:0,behavior:'smooth'}); };
+function refresh(){
+  const sc = screenEl.querySelector('.scroll').scrollTop;
+  const el = build(current);
+  screenEl.replaceWith(el); screenEl = el;
+  el.querySelector('.scroll').scrollTop = sc;
+  after[current]?.(el);
+}
+function toast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function sheet(html){
+  const s = document.getElementById('sheet');
+  s.innerHTML = '<div class="grab"></div>' + html; s.scrollTop = 0;
+  document.getElementById('scrim').classList.add('show'); s.classList.add('show');
+}
+function closeSheet(){ document.getElementById('scrim').classList.remove('show'); document.getElementById('sheet').classList.remove('show'); }
+
+/* =========================================================
+   SCREENS
+   ========================================================= */
+const screens = {
+
+  signup: () => `
+    ${logo(30)}
+    <div class="fan" aria-hidden="true">
+      ${packCard({rid:'coyo',left:6,total:10},{cls:'f1'})}
+      ${packCard({rid:'pinecrest',left:3,total:5},{cls:'f2'})}
+      ${packCard({rid:'matsuri',left:7,total:10},{cls:'f3'})}
+    </div>
+    <h1 class="xl">Your usual.<br>For less.</h1>
+    <p class="lede" style="margin:12px 0 26px">Pay ahead for meals at the places you already go, and every visit costs less. Membership is free.</p>
+    <div class="field"><label for="f-name">Name</label><input class="input" id="f-name" autocomplete="name" value="${esc(state.user.name)}"></div>
+    <div class="field"><label for="f-email">Email</label><input class="input" id="f-email" type="email" autocomplete="email" value="${esc(state.user.email)}"></div>
+    <div class="field"><label for="f-pass">Password</label><input class="input" id="f-pass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+    <p class="err" id="f-err"></p>
+    <!--dock-->
+    <button class="btn" data-act="signup">Create account</button>`,
+
+  location: () => `
+    <div class="map" aria-hidden="true">${mapSVG()}<span class="you" style="left:38%;top:58%"></span></div>
+    <h1>Find packs near you</h1>
+    <p class="lede" style="margin-top:12px">TABLE shows the restaurants closest to where you are right now, so lunch in the Gables and dinner in Wynwood both work.</p>
+    <p class="xs" style="margin-top:14px;max-width:34ch">Your location is only used while the app is open, and it is never shared with restaurants.</p>
+    <!--dock-->
+    <button class="btn" data-act="allowLoc">Allow location</button>
+    <button class="btn plain" data-act="skipLoc">Not now</button>`,
+
+  home: () => {
+    const h = new Date().getHours(), greet = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    const nm = nextMilestone();
+    return `
+    <div class="bar">
+      <button class="loc" data-act="relocate" aria-label="Update location">${ic.pin}${state.loc ? state.loc.label : 'Set location'}</button>
+      <button class="avatar" data-act="account" aria-label="Account">${initials(state.user.name || 'T')}</button>
+    </div>
+    <h1>${greet}, ${esc(first())}</h1>
+    <p class="muted s" style="margin-top:4px">${totalLeft() ? `You have ${totalLeft()} meals ready.` : 'Buy a pack to start saving.'}</p>
+
+    ${state.packs.length ? `
+      <div class="deck" id="deck" style="margin-top:22px">
+        ${state.packs.map(p => `
+          <div class="slide">
+            ${packCard(p)}
+            <div class="acts">
+              <button class="btn sm" data-act="redeemPack" data-id="${p.rid}">Redeem a meal</button>
+              ${p.left <= 2
+                ? `<button class="btn sm line" data-act="openRest" data-id="${p.rid}">Buy again</button>`
+                : `<button class="btn sm line" data-act="sendPack" data-id="${p.rid}">Send a meal</button>`}
+            </div>
+          </div>`).join('')}
+      </div>
+      ${state.packs.length > 1 ? `<div class="deck-dots" id="deckDots">${state.packs.map((_,i) => `<i class="${i?'':'on'}"></i>`).join('')}</div>` : ''}`
+    : `<div class="empty"><h2>No packs yet</h2><p class="lede">Pick a place you go to often. Each meal in a pack costs less than paying at the counter.</p><button class="btn" data-tab="explore">Find a restaurant</button></div>`}
+
+    <div class="sec"><h2>Near you</h2><button class="link" data-tab="explore">See all</button></div>
+    <div class="rows">
+      ${nearest(restaurants).slice(0,4).map(restRow).join('')}
+    </div>
+
+    <button class="row" data-tab="savings" style="margin-top:28px;border-top:1px solid var(--rule)">
+      <div class="grow">
+        <div class="t">${money(state.savedMonth)} saved this month</div>
+        <div class="d">${nm.toGo > 0 ? `${money(nm.toGo)} more to reach ${nm.m.name}` : 'Every milestone reached'}</div>
+        <div class="meter"><i style="width:${nm.pct*100}%"></i></div>
+      </div>${ic.chev}
+    </button>`;
+  },
+
+  explore: () => `
+    <h1>Explore</h1>
+    <p class="muted s" style="margin-top:4px">${state.loc ? `Closest to ${state.loc.label} first` : 'Restaurants in Miami'}</p>
+    <div style="position:relative;margin-top:20px">
+      <span style="position:absolute;left:16px;top:17px;color:var(--cream-50)">${ic.search}</span>
+      <input class="input" id="q" style="padding-left:46px" placeholder="Search restaurants or dishes" value="${esc(state.q)}" autocomplete="off" aria-label="Search">
+    </div>
+    <div class="chips" style="margin-top:14px">
+      ${['All','Cuban','Japanese','Pizza','Tacos','Burgers'].map(c => `<button class="chip ${state.cat===c?'on':''}" data-act="cat" data-id="${c}">${c}</button>`).join('')}
+    </div>
+    <div class="rows" id="rlist" style="margin-top:18px">${exploreRows()}</div>
+    <p class="xs" style="margin-top:24px">Restaurants shown are examples for this prototype, not current partners.</p>`,
+
+  restaurant: () => {
+    const r = R(state.restId), p = packOf(r.id), n = state.size;
+    const buying = canBuy(r.id);
+    return `
+    <div class="band p-${r.id}"><button class="back" data-act="back" aria-label="Back">${ic.back}</button></div>
+    <h1 class="xl" style="margin-top:-30px;position:relative">${r.name}</h1>
+    <p class="muted s" style="margin-top:6px">${r.kind}, ${r.area}. ${distTxt(r)} away.</p>
+    <p class="lede" style="margin-top:14px">Pay ahead for 5 or 10 meals at ${r.disc}% off. Each visit uses one.</p>
+
+    <div class="sec"><h2>TABLE menu</h2><span class="xs">Any item counts as one meal</span></div>
+    <div class="menu">
+      ${r.menu.map(m => `<div class="mi"><span>${m}</span><span class="lead"></span><span class="muted">${money(r.price)}</span></div>`).join('')}
+    </div>
+
+    ${!buying ? `
+      <div class="sec"><h2>Your pack</h2></div>
+      ${packCard(p,{small:true})}
+      <p class="note" style="margin-top:14px">You can buy another ${r.name} pack once you're down to 2 meals, so you only have one active pack here at a time.</p>
+      <!--dock-->
+      <button class="btn" data-act="redeemPack" data-id="${r.id}">Redeem a meal</button>`
+    : `
+      <div class="sec"><h2>${p ? 'Buy again' : 'Choose a pack'}</h2>${p ? `<span class="xs">${p.left} meal${p.left===1?'':'s'} left now</span>` : ''}</div>
+      <div class="rows" data-group="size" role="radiogroup">
+        ${[10,5].map(s => `
+          <button class="row radio ${n===s?'on':''}" data-val="${s}" role="radio" aria-checked="${n===s}">
+            <span class="dot"></span>
+            <span class="grow"><span class="t">${s} meals</span><div class="d">${money(packPrice(r,s)/s)} a meal, you save ${money(fullPrice(r,s)-packPrice(r,s))}</div></span>
+            <span class="r"><span class="strike s">${money(fullPrice(r,s))}</span><br><span style="font-size:18px;font-weight:600">${money(packPrice(r,s))}</span></span>
+          </button>`).join('')}
+      </div>
+      ${p ? `<p class="xs" style="margin-top:12px">Your ${p.left} remaining meal${p.left===1?'':'s'} carry over into the new pack.</p>` : ''}
+      <!--dock-->
+      <button class="btn" data-act="buy" id="buyBtn">${p ? 'Buy again' : 'Buy pack'} for ${money(packPrice(r,n))}</button>`}`;
+  },
+
+  checkout: () => {
+    const r = R(state.restId), n = state.size, total = packPrice(r,n), m = method(state.pay);
+    const isWallet = state.pay === 'apple' || state.pay === 'google';
+    return `
+    <div class="bar"><button class="back" data-act="back" aria-label="Back">${ic.back}</button><span class="title">Checkout</span><span style="width:40px"></span></div>
+    <div class="paper">
+      <div class="head">${tile(r,44)}<div><div style="font-weight:600;font-size:17px">${r.name}</div><div style="font-size:13px;color:var(--paper-dim)">${n}-meal pack</div></div></div>
+      <hr>
+      <div class="pl"><span class="k">${n} meals at ${money(r.price)}</span><span class="strike">${money(fullPrice(r,n))}</span></div>
+      <div class="pl"><span class="k">Pack discount</span><span>−${money(fullPrice(r,n)-total)}</span></div>
+      <div class="pl"><span class="k">Membership</span><span>Free</span></div>
+      <hr>
+      <div class="pl tot"><span>Total</span><span>${money(total)}</span></div>
+    </div>
+
+    <div class="sec" style="margin-top:34px"><h2>Pay with</h2></div>
+    <div class="rows">
+      <button class="row" data-act="payPicker">
+        ${m.mark}
+        <span class="grow"><span class="t">${m.label}</span>${m.card ? `<div class="d">Expires ${m.card.exp}${state.pay==='temp' ? ', for this purchase only' : ''}</div>` : ''}</span>
+        <span class="link">Change</span>
+      </button>
+    </div>
+    <!--dock-->
+    <button class="btn ${isWallet?'cream':''}" data-act="pay" id="payBtn">${isWallet ? `Pay ${money(total)} with ${m.label}` : `Pay ${money(total)}`}</button>
+    <p class="xs" style="display:flex;align-items:center;justify-content:center;gap:6px">${ic.lock} Secured by Stripe</p>`;
+  },
+
+  addCard: () => {
+    const fromAcct = state.addFrom === 'account';
+    return `
+    <div class="bar"><button class="back" data-act="back" aria-label="Back">${ic.back}</button><span class="title">Add a card</span><span style="width:40px"></span></div>
+    <h1>Card details</h1>
+    <p class="muted s" style="margin:6px 0 22px">Test mode. Use 4242 4242 4242 4242 with any future date.</p>
+    <div class="cardform" id="cardform">
+      <div class="cf"><input id="cc-num" inputmode="numeric" autocomplete="off" placeholder="Card number" aria-label="Card number"><span id="cc-brand">${brandMark('')}</span></div>
+      <div class="split">
+        <div class="cf"><input id="cc-exp" inputmode="numeric" autocomplete="off" placeholder="MM / YY" aria-label="Expiration date"></div>
+        <div class="cf"><input id="cc-cvc" inputmode="numeric" autocomplete="off" placeholder="CVC" aria-label="Security code"></div>
+      </div>
+      <div class="cf"><input id="cc-zip" inputmode="numeric" autocomplete="off" placeholder="ZIP" aria-label="ZIP code"></div>
+    </div>
+    <p class="err" id="cc-err"></p>
+    <div class="row" style="margin-top:14px;border-top:1px solid var(--rule)">
+      <span class="grow"><span class="t">Save this card</span><div class="d">${fromAcct ? 'Cards you add here are always saved' : 'Saved cards appear in your account'}</div></span>
+      <button class="switch" role="switch" aria-checked="${fromAcct ? 'true' : state.saveCard}" data-act="toggleSave" aria-label="Save this card" ${fromAcct ? 'disabled' : ''}></button>
+    </div>
+    <!--dock-->
+    <button class="btn" data-act="saveCard">${fromAcct ? 'Add card' : 'Use this card'}</button>
+    <p class="xs" style="display:flex;align-items:center;justify-content:center;gap:6px">${ic.lock} Secured by Stripe</p>`;
+  },
+
+  success: () => {
+    const { r, n, paidWith } = state.lastBought, p = packOf(r.id);
+    return `
+    <div style="padding-top:20px" class="appear">${packCard(p)}</div>
+    <h1 style="margin-top:32px">Your pack is ready</h1>
+    <p class="lede" style="margin-top:10px">${n} meals at ${r.name}, paid with ${paidWith}. Next time you're there, open Redeem and say “I have a TABLE meal.”</p>
+    <div class="pair">
+      <div><div class="num">${p.left}</div><div class="xs">meals ready</div></div>
+      <div><div class="num">${money(fullPrice(r,n)-packPrice(r,n))}</div><div class="xs">saved on this pack</div></div>
+    </div>
+    <!--dock-->
+    <button class="btn" data-act="redeemPack" data-id="${r.id}">Redeem a meal now</button>
+    <button class="btn plain" data-tab="home">Back to home</button>`;
+  },
+
+  redeem: () => {
+    if (!state.packs.length) return `
+      <h1>Redeem</h1>
+      <div class="empty"><h2>No meals left</h2><p class="lede">Buy a pack at a restaurant you visit often, then come back here at the counter.</p><button class="btn" data-tab="explore">Find a restaurant</button></div>`;
+    if (!packOf(state.redeemId)) state.redeemId = state.packs[0].rid;
+    const p = packOf(state.redeemId), r = R(p.rid);
+    return `
+    <h1>Redeem</h1>
+    ${state.packs.length > 1 ? `<div class="chips" style="margin-top:16px">${state.packs.map(x => `<button class="chip ${x.rid===p.rid?'on':''}" data-act="pickRedeem" data-id="${x.rid}">${R(x.rid).name}</button>`).join('')}</div>` : ''}
+    <div class="paper ticket" style="margin-top:20px">
+      <div style="font-size:13px;color:var(--paper-dim)">At ${r.name}, show this and say</div>
+      <div class="say">“I have a TABLE meal”</div>
+      <div class="qr">${qrSVG(r.id + p.left)}</div>
+      <div class="left"><b>${p.left}</b> of ${p.total} meals left</div>
+    </div>
+    <button class="link" data-act="sendPack" data-id="${r.id}" style="margin-top:22px">Send a meal to a friend instead</button>
+    <!--dock-->
+    <button class="btn" data-act="done">Done</button>`;
+  },
+
+  send: () => {
+    if (!state.packs.length) return `<div class="bar"><button class="back" data-act="back" aria-label="Back">${ic.back}</button></div><h2>No meals to send</h2>`;
+    if (!packOf(state.sendPack)) state.sendPack = state.packs[0].rid;
+    return `
+    <div class="bar"><button class="back" data-act="back" aria-label="Back">${ic.back}</button><span class="title">Send a meal</span><span style="width:40px"></span></div>
+    <h1>Treat a friend</h1>
+    <p class="lede" style="margin-top:8px">One meal moves from your pack to theirs. They redeem it the same way you do.</p>
+    <div class="sec"><h2>From</h2></div>
+    <div class="rows" data-group="sendPack" role="radiogroup">
+      ${state.packs.map(p => { const r = R(p.rid); return `
+        <button class="row radio ${state.sendPack===p.rid?'on':''}" data-val="${p.rid}" role="radio" aria-checked="${state.sendPack===p.rid}">
+          <span class="dot"></span>${tile(r,40)}<span class="grow"><span class="t">${r.name}</span><div class="d">${p.left} meals left</div></span>
+        </button>`; }).join('')}
+    </div>
+    <div class="sec"><h2>To</h2></div>
+    <div class="rows" data-group="sendTo" role="radiogroup">
+      ${contacts.map(c => `
+        <button class="row radio ${state.sendTo===c.name?'on':''}" data-val="${c.name}" role="radio" aria-checked="${state.sendTo===c.name}">
+          <span class="dot"></span><span class="avatar" style="background:var(--char-2);color:var(--cream)">${initials(c.name)}</span>
+          <span class="grow"><span class="t">${c.name}</span><div class="d">@${c.handle}</div></span>
+        </button>`).join('')}
+    </div>
+    <!--dock-->
+    <button class="btn" data-act="send" id="sendBtn" ${state.sendTo?'':'disabled'}>${state.sendTo ? `Send to ${state.sendTo.split(' ')[0]}` : 'Choose a friend'}</button>`;
+  },
+
+  sent: () => {
+    const { to, r, left } = state.lastSent, fn = to.split(' ')[0];
+    return `
+    <h1 style="margin-top:20px">Meal sent to ${fn}</h1>
+    <p class="lede" style="margin-top:10px">${fn} gets a text with how to redeem one meal at ${r.name}.</p>
+    <div class="paper" style="margin-top:26px">
+      <div class="head">${tile(r,44)}<div><div style="font-weight:600">1 meal at ${r.name}</div><div style="font-size:13px;color:var(--paper-dim)">To ${to}</div></div></div>
+      <hr>
+      <div class="pl"><span class="k">Left in your pack</span><span style="font-weight:600">${left} meal${left===1?'':'s'}</span></div>
+      <div class="pl"><span class="k">Status</span><span>Delivered</span></div>
+    </div>
+    <!--dock-->
+    <button class="btn" data-tab="home">Back to home</button>
+    ${left > 0 ? `<button class="btn plain" data-act="sendPack" data-id="${r.id}">Send another</button>` : ''}`;
+  },
+
+  savings: () => {
+    const { m, toGo } = nextMilestone(), C = 2*Math.PI*104;
+    const month = new Date().toLocaleString('en-US',{month:'long'});
+    return `
+    <h1>Savings</h1>
+    <div class="ring">
+      <svg width="236" height="236" viewBox="0 0 236 236" aria-hidden="true">
+        <circle cx="118" cy="118" r="104" stroke="var(--char-2)" stroke-width="12" fill="none"/>
+        <circle class="arc" id="arc" cx="118" cy="118" r="104" stroke="var(--gold)" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}"/>
+      </svg>
+      <div class="in"><div class="num" id="saved">$0</div><div class="xs" style="margin-top:6px">saved in ${month}</div></div>
+    </div>
+    <p class="s" style="text-align:center;margin-top:14px">${toGo > 0 ? `${money(toGo)} more to reach <span class="gold">${m.name}</span>` : 'You reached every milestone this month'}</p>
+    <div class="pair">
+      <div><div class="num">${state.mealsMonth}</div><div class="xs">meals used this month</div></div>
+      <div><div class="num">${totalLeft()}</div><div class="xs">meals ready to use</div></div>
+    </div>
+    <div class="sec"><h2>Milestones</h2></div>
+    <div class="stamps">
+      ${milestones.map(x => `<div class="stamp ${state.savedMonth>=x.at?'got':''}"><div class="c">$${x.at}</div>${x.name}</div>`).join('')}
+    </div>
+    <div class="sec"><h2>Recent</h2></div>
+    <div class="rows">
+      ${state.activity.slice(0,6).map(a => `<div class="row"><span class="grow"><span class="t" style="font-size:14.5px">${a.text}</span><div class="d">${a.when}</div></span><span class="r ${a.amt?'gold':'muted'}" style="font-size:14px">${a.amt ? '+' + money(a.amt) : '—'}</span></div>`).join('')}
+    </div>`;
+  },
+
+  account: () => {
+    const u = state.user, a = u.address;
+    return `
+    <div class="bar"><button class="back" data-act="back" aria-label="Back">${ic.back}</button><span class="title">Account</span><span style="width:40px"></span></div>
+    <div class="profile">
+      <span class="avatar">${initials(u.name || 'T')}</span>
+      <div><h2>${esc(u.name)}</h2><div class="muted s">@${esc(u.username)}</div></div>
+    </div>
+
+    <div class="group"><h3>Profile</h3>
+      <div class="rows">
+        <div class="row"><span class="grow"><span class="d">Name</span><span class="t">${esc(u.name)}</span></span></div>
+        <div class="row"><span class="grow"><span class="d">Username</span><span class="t">@${esc(u.username)}</span></span></div>
+        <div class="row"><span class="grow"><span class="d">Email</span><span class="t">${esc(u.email || 'Not added')}</span></span></div>
+      </div>
+    </div>
+
+    <div class="group"><h3>Security</h3>
+      <div class="rows"><button class="row" data-act="changePassword"><span class="grow t">Change password</span>${ic.chev}</button></div>
+    </div>
+
+    <div class="group"><h3>Saved address</h3>
+      <div class="rows"><button class="row" data-act="editAddress"><span class="grow"><span class="t">${esc(a.line1)}${a.line2 ? ', ' + esc(a.line2) : ''}</span><div class="d">${esc(a.city)}</div></span><span class="link">Edit</span></button></div>
+    </div>
+
+    <div class="group"><h3>Payment methods</h3>
+      <div class="rows">
+        ${state.cards.map(c => `
+          <div class="row">${brandMark(c.brand)}<span class="grow"><span class="t">${c.brand} ending ${c.last4}</span><div class="d">Expires ${c.exp}</div></span>
+            <button class="link" style="color:var(--cream-50)" data-act="removeCard" data-id="${c.id}">Remove</button></div>`).join('')}
+        <div class="row"><span class="pm apple">Pay</span><span class="grow"><span class="t">Apple Pay</span><div class="d">Available on this phone</div></span></div>
+        <div class="row"><span class="pm google">G Pay</span><span class="grow"><span class="t">Google Pay</span><div class="d">Available on this phone</div></span></div>
+        <button class="row" data-act="addCardFromAccount"><span class="pm card" style="color:var(--gold)">${ic.plus}</span><span class="grow t gold">Add a card</span></button>
+      </div>
+    </div>
+
+    <div class="group" style="margin-bottom:10px"><div class="rows"><button class="row" data-act="signOut"><span class="grow t danger">Sign out</span></button></div></div>`;
+  },
+};
+
+/* ---------- pieces ---------- */
+function restRow(r){
+  const p = packOf(r.id);
+  return `<button class="row" data-act="openRest" data-id="${r.id}">
+    ${tile(r)}
+    <span class="grow"><span class="t">${r.name}</span><div class="d">${r.kind}, ${r.area}</div></span>
+    <span class="r"><div class="s">${distTxt(r)}</div><div class="xs" style="color:${p ? 'var(--gold)' : 'var(--gold-lo)'}">${p ? `${p.left} left in your pack` : `${r.disc}% off packs`}</div></span>
+  </button>`;
+}
+function exploreRows(){
+  const q = state.q.trim().toLowerCase();
+  const list = nearest(restaurants).filter(r => (state.cat === 'All' || r.cat === state.cat) &&
+    (!q || `${r.name} ${r.kind} ${r.area} ${r.menu.join(' ')}`.toLowerCase().includes(q)));
+  return list.length ? list.map(restRow).join('') : `<p class="lede" style="padding:20px 0">Nothing matches “${esc(state.q)}”. Try a dish, like tacos or croqueta.</p>`;
+}
+function nextMilestone(){
+  const m = milestones.find(m => m.at > state.savedMonth) || milestones[milestones.length-1];
+  const prevAt = [...milestones].reverse().find(x => x.at <= state.savedMonth)?.at || 0;
+  const pct = m.at > state.savedMonth ? (state.savedMonth - prevAt) / (m.at - prevAt) : 1;
+  return { m, toGo:Math.max(0, m.at - state.savedMonth), pct };
+}
+function mapSVG(){
+  const pts = [['Wynwood',74,18],['Downtown',80,34],['Brickell',76,47],['Coconut Grove',58,64],['Coral Gables',30,48],['South Miami',22,78]];
+  return `<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+    <path d="M88 0 C84 20 90 30 84 45 C80 58 70 70 66 100 L100 100 L100 0Z" fill="#141210"/>
+    ${[20,40,60,80].map(y => `<path d="M0 ${y} H100" stroke="rgba(247,241,227,.05)" stroke-width=".3"/>`).join('')}
+    ${[20,40,60,80].map(x => `<path d="M${x} 0 V100" stroke="rgba(247,241,227,.05)" stroke-width=".3"/>`).join('')}
+    <path d="M38 58 L30 48 M38 58 L58 64 M38 58 L22 78 M38 58 L76 47" stroke="rgba(212,174,106,.35)" stroke-width="1" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>
+    ${pts.map(([n,x,y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#D4AE6A"/>`).join('')}
+  </svg>
+  ${pts.map(([n,x,y]) => `<span style="position:absolute;left:${x}%;top:${y}%;transform:translate(-50%,-170%);font-size:11px;color:var(--cream-50);white-space:nowrap">${n}</span>`).join('')}`;
+}
+
+/* fake QR (changes after every meal) */
+function qrSVG(seed){
+  const N = 25; let h = 0; for (const c of seed) h = (h*31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => (h = (h*1664525 + 1013904223) >>> 0) / 4294967296;
+  const finder = (x,y) => { for (const [fx,fy] of [[0,0],[N-7,0],[0,N-7]]) { const dx=x-fx, dy=y-fy;
+    if (dx>=-1&&dx<=7&&dy>=-1&&dy<=7){ if (dx<0||dy<0||dx>6||dy>6) return 0;
+      return (dx===0||dy===0||dx===6||dy===6||(dx>=2&&dx<=4&&dy>=2&&dy<=4)) ? 1 : 0; } } return null; };
+  let d = '';
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    let f = finder(x,y); if (f===null) f = rnd() > .5 ? 1 : 0;
+    if (x===6 && y>7 && y<N-8) f = y%2===0 ? 1 : 0;
+    if (y===6 && x>7 && x<N-8) f = x%2===0 ? 1 : 0;
+    if (f) d += `M${x} ${y}h1v1h-1z`;
+  }
+  return `<svg viewBox="0 0 ${N} ${N}" width="184" height="184" shape-rendering="crispEdges" role="img" aria-label="Redemption code"><path d="${d}" fill="#1B1712"/></svg>`;
+}
+
+/* ---------- after-render hooks ---------- */
+const brandOf = v => { const d = v.replace(/\D/g,''); return /^4/.test(d) ? 'Visa' : /^(5[1-5]|2[2-7])/.test(d) ? 'Mastercard' : /^3[47]/.test(d) ? 'Amex' : ''; };
+const luhn = d => { let s = 0; [...d].reverse().forEach((c,i) => { let n = +c; if (i % 2){ n *= 2; if (n > 9) n -= 9; } s += n; }); return s % 10 === 0; };
+
+const after = {
+  signup(el){ setTimeout(() => el.querySelector('#f-name')?.focus({preventScroll:true}), 450); },
+  home(el){
+    const deck = el.querySelector('#deck'), dots = el.querySelector('#deckDots');
+    if (deck && dots) deck.addEventListener('scroll', () => {
+      const i = Math.round(deck.scrollLeft / (deck.firstElementChild.offsetWidth + 14));
+      dots.querySelectorAll('i').forEach((d,k) => d.classList.toggle('on', k === i));
+    }, { passive:true });
+  },
+  restaurant(el){
+    const sc = el.querySelector('.scroll'), sb = document.getElementById('statusbar');
+    const upd = () => sb.classList.toggle('clear', sc.scrollTop < 150);
+    sc.addEventListener('scroll', upd, { passive:true }); upd();
+  },
+  explore(el){ el.querySelector('#q').addEventListener('input', e => { state.q = e.target.value; el.querySelector('#rlist').innerHTML = exploreRows(); }); },
+  savings(el){
+    const { pct } = nextMilestone(), C = 2*Math.PI*104, arc = el.querySelector('#arc'), out = el.querySelector('#saved');
+    requestAnimationFrame(() => requestAnimationFrame(() => arc.style.strokeDashoffset = C*(1-pct)));
+    const target = state.savedMonth, t0 = performance.now();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    (function tick(t){ const k = reduce ? 1 : Math.min(1, Math.max(0,(t-t0)/1100)), e = 1 - Math.pow(1-k,3);
+      out.textContent = '$' + Math.round(target*e); if (k < 1 && out.isConnected) requestAnimationFrame(tick); })(t0);
+  },
+  addCard(el){
+    const num = el.querySelector('#cc-num'), exp = el.querySelector('#cc-exp'), cvc = el.querySelector('#cc-cvc'), zip = el.querySelector('#cc-zip');
+    num.addEventListener('input', () => {
+      const brand = brandOf(num.value), max = brand === 'Amex' ? 15 : 16;
+      const digits = num.value.replace(/\D/g,'').slice(0,max);
+      num.value = brand === 'Amex' ? [digits.slice(0,4),digits.slice(4,10),digits.slice(10)].filter(Boolean).join(' ') : digits.replace(/(\d{4})(?=\d)/g,'$1 ');
+      el.querySelector('#cc-brand').innerHTML = brandMark(brand);
+      if (digits.length === max) exp.focus({preventScroll:true});
+    });
+    exp.addEventListener('input', () => {
+      let v = exp.value.replace(/\D/g,'').slice(0,4);
+      if (v.length === 1 && +v > 1) v = '0' + v;
+      exp.value = v.length > 2 ? v.slice(0,2) + ' / ' + v.slice(2) : v;
+      if (v.length === 4) cvc.focus({preventScroll:true});
+    });
+    cvc.addEventListener('input', () => { cvc.value = cvc.value.replace(/\D/g,'').slice(0,4); });
+    zip.addEventListener('input', () => { zip.value = zip.value.replace(/\D/g,'').slice(0,5); });
+    setTimeout(() => num.focus({preventScroll:true}), 450);
+  },
+};
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+function setLoc(p){
+  const far = miles(p, DEMO) > 40, l = far ? DEMO : p;
+  state.loc = { lat:l.lat, lng:l.lng, label:hoodOf(l) };
+  return far;
+}
+function enter(msg){ stack = []; render('home','push'); if (msg) setTimeout(() => toast(msg), 450); }
+
+const actions = {
+  back, closeSheet,
+  signup(){
+    const $ = id => document.getElementById(id);
+    const name = $('f-name').value.trim(), email = $('f-email').value.trim(), pass = $('f-pass').value;
+    document.querySelectorAll('.input').forEach(i => i.classList.remove('bad'));
+    const fail = (id, msg) => { $(id).classList.add('bad'); $(id).focus(); $('f-err').textContent = msg; };
+    if (!name) return fail('f-name','Enter your name.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) return fail('f-email','Enter an email address, like you@miami.edu.');
+    if (pass.length < 8) return fail('f-pass','Use at least 8 characters for your password.');
+    Object.assign(state.user, { name, email, password:pass, username:name.toLowerCase().replace(/[^a-z0-9]/g,'') || 'member' });
+    stack = []; render('location','push');
+  },
+  allowLoc(btn){
+    btn.disabled = true; btn.textContent = 'Finding you…';
+    const fallback = msg => { setLoc(DEMO); enter(msg); };
+    if (!navigator.geolocation) return fallback(`Location isn't available. Showing ${hoodOf(DEMO)} for now.`);
+    navigator.geolocation.getCurrentPosition(
+      pos => { const far = setLoc({ lat:pos.coords.latitude, lng:pos.coords.longitude }); enter(far ? `You're outside Miami, so we're showing ${state.loc.label} for the demo.` : `Showing restaurants near ${state.loc.label}.`); },
+      () => fallback(`Location is off. Showing ${hoodOf(DEMO)} for now.`), { timeout:8000, maximumAge:60000 });
+  },
+  skipLoc(){ setLoc(DEMO); enter(`Showing ${state.loc.label}. Tap the location button to change it.`); },
+  relocate(){
+    if (!navigator.geolocation) return toast("Location isn't available on this device.");
+    toast('Updating your location…');
+    navigator.geolocation.getCurrentPosition(
+      pos => { const far = setLoc({ lat:pos.coords.latitude, lng:pos.coords.longitude }); refresh(); toast(far ? `You're outside Miami, so we're showing ${state.loc.label}.` : `Now showing ${state.loc.label}.`); },
+      () => toast('Turn on location in Settings to see what is near you.'), { timeout:8000 });
+  },
+  account(){ push('account'); },
+  openRest(el){ state.restId = el.dataset.id; state.size = 10; push('restaurant'); },
+  cat(el){ state.cat = el.dataset.id; screenEl.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === el)); screenEl.querySelector('#rlist').innerHTML = exploreRows(); },
+  buy(){
+    if (!canBuy(state.restId)) return toast('You already have an active pack here.');
+    if (!validPay()) state.pay = state.cards[0]?.id || 'apple';
+    push('checkout');
+  },
+
+  payPicker(){
+    const opt = (id, mark, label, sub='') => `
+      <button class="row radio ${state.pay===id?'on':''}" data-act="pickPay" data-id="${id}" role="radio" aria-checked="${state.pay===id}">
+        <span class="dot"></span>${mark}<span class="grow"><span class="t">${label}</span>${sub?`<div class="d">${sub}</div>`:''}</span></button>`;
+    sheet(`
+      <h2>Pay with</h2>
+      <div class="rows" style="margin-top:14px" role="radiogroup">
+        ${state.cards.map(c => opt(c.id, brandMark(c.brand), `${c.brand} ending ${c.last4}`, `Expires ${c.exp}`)).join('')}
+        ${state.tempCard ? opt('temp', brandMark(state.tempCard.brand), `${state.tempCard.brand} ending ${state.tempCard.last4}`, 'This purchase only') : ''}
+        ${opt('apple','<span class="pm apple">Pay</span>','Apple Pay')}
+        ${opt('google','<span class="pm google">G Pay</span>','Google Pay')}
+        <button class="row" data-act="addCardFromCheckout"><span class="pm card" style="color:var(--gold)">${ic.plus}</span><span class="grow t gold">Add a new card</span></button>
+      </div>`);
+  },
+  pickPay(el){ state.pay = el.dataset.id; closeSheet(); refresh(); },
+  addCardFromCheckout(){ closeSheet(); state.addFrom = 'checkout'; state.saveCard = true; push('addCard'); },
+  addCardFromAccount(){ state.addFrom = 'account'; push('addCard'); },
+  toggleSave(el){ state.saveCard = el.getAttribute('aria-checked') !== 'true'; el.setAttribute('aria-checked', state.saveCard); },
+  saveCard(){
+    const $ = id => document.getElementById(id);
+    const digits = $('cc-num').value.replace(/\D/g,''), brand = brandOf(digits);
+    const [mm = '', yy = ''] = $('cc-exp').value.split('/').map(s => s.trim());
+    const err = $('cc-err'), form = $('cardform'); form.classList.remove('bad');
+    const fail = (id, msg) => { form.classList.add('bad'); err.textContent = msg; $(id).focus({preventScroll:true}); };
+    if (digits.length < (brand === 'Amex' ? 15 : 16)) return fail('cc-num','Your card number is incomplete.');
+    if (!luhn(digits)) return fail('cc-num','Your card number is invalid. Check it and try again.');
+    const now = new Date(), m = +mm, y = 2000 + (+yy);
+    if (!m || m > 12 || yy.length < 2) return fail('cc-exp',"Your card's expiration date is incomplete.");
+    if (y < now.getFullYear() || (y === now.getFullYear() && m < now.getMonth()+1)) return fail('cc-exp',"Your card's expiration date is in the past.");
+    if ($('cc-cvc').value.length < (brand === 'Amex' ? 4 : 3)) return fail('cc-cvc',"Your card's security code is incomplete.");
+    if ($('cc-zip').value.length < 5) return fail('cc-zip','Your ZIP code is incomplete.');
+    const card = { id:'c' + Date.now(), brand:brand || 'Card', last4:digits.slice(-4), exp:`${mm}/${yy}` };
+    const keep = state.addFrom === 'account' || state.saveCard;
+    if (keep){ state.cards.push(card); if (state.addFrom === 'checkout') state.pay = card.id; }
+    else { state.tempCard = card; state.pay = 'temp'; }
+    back();
+    setTimeout(() => toast(keep ? `${card.brand} ending ${card.last4} saved to your account.` : `Using ${card.brand} ending ${card.last4} for this purchase only.`), 300);
+  },
+  pay(btn){
+    btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Processing';
+    screenEl.querySelector('.scroll').style.pointerEvents = 'none';
+    const paidWith = method(state.pay).label;
+    setTimeout(() => {
+      const r = R(state.restId), n = state.size, p = packOf(r.id);
+      if (p){ p.left += n; p.total = p.left; } else state.packs.unshift({ rid:r.id, left:n, total:n });
+      state.activity.unshift({ text:`Bought a ${n}-meal pack at ${r.name}`, when:'Just now', amt:0 });
+      state.lastBought = { r, n, paidWith }; state.redeemId = r.id;
+      if (state.pay === 'temp'){ state.tempCard = null; state.pay = state.cards[0]?.id || 'apple'; }
+      stack = []; render('success','swap');
+    }, 1500);
+  },
+
+  redeemPack(el){ state.redeemId = el.dataset.id; stack = []; render('redeem','swap'); },
+  pickRedeem(el){ state.redeemId = el.dataset.id; refresh(); },
+  done(){
+    const p = packOf(state.redeemId), r = R(p.rid);
+    const saved = Math.round(perMealSave(r, p.total >= 10 ? 10 : 5) * 100) / 100;
+    const before = nextMilestone().m;
+    p.left -= 1; state.mealsMonth += 1; state.savedMonth = Math.round((state.savedMonth + saved) * 100) / 100;
+    state.activity.unshift({ text:`Meal at ${r.name}`, when:'Just now', amt:saved });
+    const reached = state.savedMonth >= before.at && state.savedMonth - saved < before.at ? before : null;
+    const snap = { ...p }, punchAt = snap.total - snap.left - 1;
+    if (p.left <= 0) state.packs = state.packs.filter(x => x !== p);
+    refresh();
+    sheet(`
+      ${packCard(snap, { punch:punchAt, small:true })}
+      <h2 style="margin-top:22px">${snap.left ? `Enjoy. ${snap.left} meal${snap.left===1?'':'s'} left at ${r.name}.` : `Enjoy. That was your last ${r.name} meal.`}</h2>
+      <p class="lede" style="margin-top:6px">You saved ${money(saved)} on this meal${reached ? ` and reached ${reached.name} for the month` : ''}.</p>
+      <div style="margin-top:22px">
+        ${snap.left <= 2 ? `<button class="btn" data-act="buyAgainFromSheet" data-id="${r.id}">Buy again</button><button class="btn plain" data-act="closeSheet" style="margin-top:6px">Not now</button>`
+                         : `<button class="btn" data-act="closeSheet">Done</button>`}
+      </div>`);
+  },
+  buyAgainFromSheet(el){ closeSheet(); state.restId = el.dataset.id; state.size = 10; stack = [current]; render('restaurant','push'); },
+  sendPack(el){ state.sendPack = el.dataset.id; state.sendTo = null; push('send'); },
+  send(btn){
+    btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Sending';
+    setTimeout(() => {
+      const p = packOf(state.sendPack), r = R(p.rid), fn = state.sendTo.split(' ')[0];
+      p.left -= 1;
+      state.activity.unshift({ text:`Sent a ${r.name} meal to ${fn}`, when:'Just now', amt:0 });
+      state.lastSent = { to:state.sendTo, r, left:p.left };
+      if (p.left <= 0) state.packs = state.packs.filter(x => x !== p);
+      stack = []; render('sent','swap');
+    }, 800);
+  },
+
+  changePassword(){
+    sheet(`
+      <h2>Change password</h2>
+      <div style="margin-top:18px">
+        <div class="field"><label for="pw-cur">Current password</label><input class="input" id="pw-cur" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="pw-new">New password</label><input class="input" id="pw-new" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+        <div class="field"><label for="pw-con">Confirm new password</label><input class="input" id="pw-con" type="password" autocomplete="new-password"></div>
+        <p class="err" id="pw-err"></p>
+      </div>
+      <button class="btn" data-act="savePassword" style="margin-top:10px">Update password</button>`);
+  },
+  savePassword(){
+    const $ = id => document.getElementById(id), err = $('pw-err');
+    if ($('pw-cur').value !== state.user.password) return err.textContent = "That isn't your current password.";
+    if ($('pw-new').value.length < 8) return err.textContent = 'Use at least 8 characters for your new password.';
+    if ($('pw-new').value !== $('pw-con').value) return err.textContent = "The new passwords don't match.";
+    state.user.password = $('pw-new').value; closeSheet(); toast('Password updated.');
+  },
+  editAddress(){
+    const a = state.user.address;
+    sheet(`
+      <h2>Saved address</h2>
+      <div style="margin-top:18px">
+        <div class="field"><label for="ad-1">Street</label><input class="input" id="ad-1" value="${esc(a.line1)}" autocomplete="address-line1"></div>
+        <div class="field"><label for="ad-2">Apt or suite</label><input class="input" id="ad-2" value="${esc(a.line2)}" autocomplete="address-line2"></div>
+        <div class="field"><label for="ad-3">City, state and ZIP</label><input class="input" id="ad-3" value="${esc(a.city)}"></div>
+        <p class="err" id="ad-err"></p>
+      </div>
+      <button class="btn" data-act="saveAddress" style="margin-top:10px">Save address</button>`);
+  },
+  saveAddress(){
+    const v = id => document.getElementById(id).value.trim();
+    if (!v('ad-1') || !v('ad-3')) return document.getElementById('ad-err').textContent = 'Enter a street and a city.';
+    state.user.address = { line1:v('ad-1'), line2:v('ad-2'), city:v('ad-3') }; closeSheet(); refresh(); toast('Address saved.');
+  },
+  removeCard(el){
+    const c = state.cards.find(c => c.id === el.dataset.id);
+    sheet(`
+      <h2>Remove ${c.brand} ending ${c.last4}?</h2>
+      <p class="lede" style="margin-top:8px">You can add it again any time. Packs you already bought aren't affected.</p>
+      <div style="margin-top:22px"><button class="btn" data-act="confirmRemove" data-id="${c.id}">Remove card</button><button class="btn plain" data-act="closeSheet" style="margin-top:6px">Keep card</button></div>`);
+  },
+  confirmRemove(el){
+    const c = state.cards.find(c => c.id === el.dataset.id);
+    state.cards = state.cards.filter(x => x !== c);
+    if (state.pay === c.id) state.pay = state.cards[0]?.id || 'apple';
+    closeSheet(); refresh(); toast(`${c.brand} ending ${c.last4} removed.`);
+  },
+  signOut(){ state.user.password = ''; stack = []; render('signup','pop'); toast('Signed out.'); },
+};
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+document.getElementById('scrim').addEventListener('click', closeSheet);
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab){ closeSheet(); tabTo(tab.dataset.tab); return; }
+
+  const radio = e.target.closest('.radio[data-val]');
+  if (radio){
+    const g = radio.parentElement.dataset.group, v = radio.dataset.val;
+    radio.parentElement.querySelectorAll('.radio').forEach(x => { x.classList.toggle('on', x === radio); x.setAttribute('aria-checked', x === radio); });
+    if (g === 'size'){ state.size = +v; const r = R(state.restId); screenEl.querySelector('#buyBtn').textContent = `${packOf(r.id) ? 'Buy again' : 'Buy pack'} for ${money(packPrice(r,+v))}`; }
+    if (g === 'sendPack') state.sendPack = v;
+    if (g === 'sendTo'){ state.sendTo = v; const b = screenEl.querySelector('#sendBtn'); b.disabled = false; b.textContent = `Send to ${v.split(' ')[0]}`; }
+    return;
+  }
+  const act = e.target.closest('[data-act]');
+  if (act && !act.disabled && actions[act.dataset.act]) actions[act.dataset.act](act);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && current === 'signup' && e.target.matches('input')) actions.signup();
+  if (e.key === 'Escape') closeSheet();
+});
+
+function fit(){ document.getElementById('stage').style.transform = `scale(${Math.min(1,(innerHeight-40)/890,(innerWidth-24)/420)})`; }
+addEventListener('resize', fit); fit();
+render('signup');
+</script>
+</body>
+</html>
