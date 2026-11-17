@@ -197,7 +197,10 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border:none;border-ra
 .pin.on{transform:scale(1.2)}
 .leaflet-popup-content-wrapper{background:var(--paper);color:var(--paper-ink);border-radius:8px;box-shadow:0 20px 40px rgba(0,0,0,.6)}
 .leaflet-popup-tip{background:var(--paper)}
-.leaflet-popup-content{margin:18px 20px;width:240px!important;font-size:14px;line-height:1.5}
+.leaflet-popup-content{margin:0;width:260px!important;font-size:14px;line-height:1.5}
+.leaflet-popup-content-wrapper{padding:0;overflow:hidden}
+.pop-photo{height:120px;background-size:cover;background-position:center;border-bottom:1.5px dashed rgba(27,23,18,.22)}
+.pop-body{padding:14px 20px 18px}
 .leaflet-popup-content b.n{display:block;font-size:18px;font-weight:600}
 .leaflet-popup-content .kd{color:var(--paper-dim);font-size:13px}
 .leaflet-popup-content .ln{font-size:14px;padding:4px 0}
@@ -206,7 +209,9 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border:none;border-ra
 
 /* pattern tiles (same as app) */
 .tile{width:48px;height:48px;border-radius:12px;flex-shrink:0;display:grid;place-items:center}
-.tile span{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--cream);font-size:12px;font-weight:600;display:grid;place-items:center}
+.tile{position:relative;overflow:hidden}
+.tile .photo{position:absolute;inset:0;background-size:cover;background-position:center}
+.tile .badge{position:absolute;right:3px;bottom:3px;width:16px;height:16px;border-radius:50%;box-shadow:0 0 0 2px var(--ink)}
 .p-matsuri{background:radial-gradient(circle at 50% 100%,transparent 5px,#E07A5F 6px 8px,transparent 9px 12px,#E07A5F 13px 15px,transparent 16px) 0 0/30px 15px,#2B1713}
 .p-mr01{background:conic-gradient(#B8402C 25%,#2A110C 0 50%,#B8402C 0 75%,#2A110C 0) 0 0/16px 16px}
 .p-pinecrest{background:radial-gradient(circle,#E9C17A 0 2.5px,transparent 3.5px) 0 0/16px 16px,conic-gradient(from 45deg,#7A5228 25%,#3A2410 0 50%,#7A5228 0 75%,#3A2410 0) 0 0/16px 16px}
@@ -556,10 +561,11 @@ footer .disc{margin-top:48px;padding-top:24px;border-top:1px solid var(--rule);d
         <li><a href="#about">About</a></li>
         <li><a href="#contact">Contact</a></li>
         <li><a href="app.html">App</a></li>
+        <li><a href="credits.html">Photo credits</a></li>
       </ul>
     </div>
     <div class="disc">
-      <span>Restaurants shown are examples for this prototype, not current partners.</span>
+      <span>Restaurants shown are examples for this prototype, not current partners. Food photos are openly licensed stock images, not from these restaurants.</span>
       <span>© 2026 TABLE, a BTE 210 class project</span>
     </div>
   </div>
@@ -649,15 +655,15 @@ function esc(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'
 const list = $('rlist');
 list.innerHTML = restaurants.map(r => `
   <li><button data-id="${r.id}">
-    <span class="tile p-${r.id}"><span>${r.name[0]}</span></span>
+    <span class="tile p-${r.id}"><span class="photo" style="background-image:url(images/food/${r.id}-hero.jpg)"></span><span class="badge p-${r.id}"></span></span>
     <span><span class="nm">${r.name}</span><br><span class="kd">${r.kind}, ${r.area}</span></span>
   </button></li>`).join('');
 
 function popupHTML(r){
   const line = n => `<div class="ln"><span class="k">${n} meals</span><span class="dots"></span><span class="v">${usd0(packPrice(r,n))} <s style="color:var(--paper-dim);font-weight:400">${usd0(r.price*n)}</s></span></div>`;
-  return `<b class="n">${r.name}</b><span class="kd">${r.kind}, ${r.area}</span>
+  return `<div class="pop-photo" style="background-image:url(images/food/${r.id}-hero.jpg)" role="img" aria-label="Food photo for ${r.name}"></div><div class="pop-body"><b class="n">${r.name}</b><span class="kd">${r.kind}, ${r.area}</span>
     <div style="margin-top:10px">${line(10)}${line(5)}</div>
-    <a class="go" href="app.html">Buy a pack in the app</a>`;
+    <a class="go" href="app.html">Buy a pack in the app</a></div>`;
 }
 
 if (window.L){
@@ -683,8 +689,9 @@ if (window.L){
   list.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     const r = restaurants.find(x => x.id === b.dataset.id);
+    map.closePopup();
+    map.once('moveend', () => markers[r.id].openPopup());
     map.flyTo([r.lat, r.lng], 14, { duration:.8 });
-    markers[r.id].openPopup();
   });
   map.on('click', () => map.scrollWheelZoom.enable());
 } else {

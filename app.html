@@ -147,6 +147,9 @@ h3{font-size:16px;font-weight:600}
    ========================================================= */
 .tile{position:relative;border-radius:14px;overflow:hidden;flex-shrink:0;display:grid;place-items:center}
 .tile .mono{width:46%;aspect-ratio:1;border-radius:50%;background:var(--ink);display:grid;place-items:center;font-weight:600;color:var(--cream);box-shadow:0 0 0 2px rgba(11,11,11,.4)}
+.photo{position:absolute;inset:0;background-size:cover;background-position:center}
+.tile .badge{position:absolute;right:4px;bottom:4px;width:36%;max-width:22px;aspect-ratio:1;border-radius:50%;box-shadow:0 0 0 2px var(--ink);z-index:2}
+.menu .mi .th{width:44px;height:44px;border-radius:12px;flex-shrink:0;position:relative;overflow:hidden;align-self:center}
 .p-matsuri{background:radial-gradient(circle at 50% 100%,transparent 5px,#E07A5F 6px 8px,transparent 9px 12px,#E07A5F 13px 15px,transparent 16px) 0 0/30px 15px,#2B1713}
 .p-mr01{background:conic-gradient(#B8402C 25%,#2A110C 0 50%,#B8402C 0 75%,#2A110C 0) 0 0/22px 22px}
 .p-pinecrest{background:radial-gradient(circle,#E9C17A 0 3px,transparent 4px) 0 0/22px 22px,conic-gradient(from 45deg,#7A5228 25%,#3A2410 0 50%,#7A5228 0 75%,#3A2410 0) 0 0/22px 22px}
@@ -227,11 +230,13 @@ h3{font-size:16px;font-weight:600}
 .avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:600;background:var(--cream);color:var(--ink);flex-shrink:0}
 
 /* restaurant */
-.band{height:236px;position:relative;margin:0 -24px}
-.band::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(11,11,11,.25),transparent 40%,var(--ink) 98%)}
+.band{height:250px;position:relative;margin:0 -24px}
+.band .mark{position:absolute;right:24px;bottom:22px;z-index:2;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;box-shadow:0 0 0 3px var(--ink),0 10px 24px rgba(0,0,0,.5)}
+.band .mark b{width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--cream);font-size:12px;display:grid;place-items:center}
+.band::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(rgba(11,11,11,.25),transparent 40%,var(--ink) 98%)}
 .band .back{position:absolute;top:56px;left:20px;z-index:2;background:rgba(11,11,11,.7)}
-.menu .mi{display:flex;align-items:baseline;gap:8px;padding:9px 0;font-size:15px}
-.menu .mi .lead{flex:1;border-bottom:1.5px dotted var(--cream-30);transform:translateY(-4px)}
+.menu .mi{display:flex;align-items:center;gap:12px;padding:8px 0;font-size:15px}
+.menu .mi .lead{flex:1;border-bottom:1.5px dotted var(--cream-30);min-width:12px}
 .note{padding:16px;border-radius:16px;background:var(--char);font-size:14px;line-height:1.55;color:var(--cream-70)}
 
 /* payment marks */
@@ -346,7 +351,7 @@ const restaurants = [
   { id:'mr01',     name:'Mr. 01',           kind:'Pizza', cat:'Pizza', area:'Brickell',         lat:25.7650, lng:-80.1925, price:16, disc:15,
     menu:['Margherita pizza','Pepperoni pizza','Mushroom and truffle pizza','Caesar salad and garlic knots'] },
   { id:'pinecrest',name:'Pinecrest Bakery', kind:'Cuban bakery', cat:'Cuban', area:'near UM', lat:25.7086, lng:-80.2867, price:9, disc:15,
-    menu:['Cuban sandwich and cafecito','Croqueta preparada','Three pastelitos and a cortadito','Breakfast plate'] },
+    menu:['Cuban sandwich and cafecito','Croqueta preparada','Three pastelitos and a cortadito','Colada of Cuban coffee to share'] },
   { id:'sergios',  name:"Sergio's",         kind:'Cuban', cat:'Cuban', area:'Coral Gables',     lat:25.7470, lng:-80.2610, price:15, disc:15,
     menu:['Palomilla steak','Ropa vieja','Pollo a la plancha','Vaca frita'] },
   { id:'pincho',   name:'Pincho',           kind:'Burgers and kabobs', cat:'Burgers', area:'Coral Gables', lat:25.7502, lng:-80.2560, price:13, disc:15,
@@ -419,7 +424,11 @@ const distTxt = r => { const d = dist(r); return d == null ? r.area : d.toFixed(
 const nearest = list => [...list].sort((a,b) => (dist(a) ?? 0) - (dist(b) ?? 0));
 const hoodOf = p => hoods.reduce((b,n) => miles(p,n) < miles(p,b) ? n : b).name;
 
-const tile = (r, size=56) => `<div class="tile p-${r.id}" style="width:${size}px;height:${size}px;border-radius:${size>60?18:14}px"><span class="mono" style="font-size:${Math.round(size*.26)}px">${r.name[0]}</span></div>`;
+const FOOD = "images/food/";
+const heroImg = r => `${FOOD}${r.id}-hero.jpg`;
+const dishImg = (r,i) => `${FOOD}${r.id}-${i+1}.jpg`;
+// Food photo on top of the restaurant pattern; the pattern badge works as its logo mark.
+const tile = (r, size=56) => `<div class="tile p-${r.id}" style="width:${size}px;height:${size}px;border-radius:${size>60?18:14}px"><span class="photo" style="background-image:url(${heroImg(r)})" role="img" aria-label="Food at ${r.name}"></span><span class="badge p-${r.id}"></span></div>`;
 
 /* payment methods */
 const brandMark = b => b === 'Visa' ? '<span class="pm visa">VISA</span>' : b === 'Mastercard' ? '<span class="pm mc"></span>' : b === 'Amex' ? '<span class="pm amex">AMEX</span>' : '<span class="pm card">CARD</span>';
@@ -576,20 +585,20 @@ const screens = {
       ${['All','Cuban','Japanese','Pizza','Tacos','Burgers'].map(c => `<button class="chip ${state.cat===c?'on':''}" data-act="cat" data-id="${c}">${c}</button>`).join('')}
     </div>
     <div class="rows" id="rlist" style="margin-top:18px">${exploreRows()}</div>
-    <p class="xs" style="margin-top:24px">Restaurants shown are examples for this prototype, not current partners.</p>`,
+    <p class="xs" style="margin-top:24px">Restaurants shown are examples for this prototype, not current partners. Food photos are openly licensed stock images, not from these restaurants. <a href="credits.html" style="color:var(--cream-70)">Photo credits</a></p>`,
 
   restaurant: () => {
     const r = R(state.restId), p = packOf(r.id), n = state.size;
     const buying = canBuy(r.id);
     return `
-    <div class="band p-${r.id}"><button class="back" data-act="back" aria-label="Back">${ic.back}</button></div>
-    <h1 class="xl" style="margin-top:-30px;position:relative">${r.name}</h1>
+    <div class="band p-${r.id}"><span class="photo" style="background-image:url(${heroImg(r)})" role="img" aria-label="Food photo for ${r.name}"></span><button class="back" data-act="back" aria-label="Back">${ic.back}</button><span class="mark p-${r.id}" aria-hidden="true"><b>${r.name[0]}</b></span></div>
+    <h1 class="xl" style="margin-top:-30px;position:relative;z-index:2">${r.name}</h1>
     <p class="muted s" style="margin-top:6px">${r.kind}, ${r.area}. ${distTxt(r)} away.</p>
     <p class="lede" style="margin-top:14px">Pay ahead for 5 or 10 meals at ${r.disc}% off. Each visit uses one.</p>
 
     <div class="sec"><h2>TABLE menu</h2><span class="xs">Any item counts as one meal</span></div>
     <div class="menu">
-      ${r.menu.map(m => `<div class="mi"><span>${m}</span><span class="lead"></span><span class="muted">${money(r.price)}</span></div>`).join('')}
+      ${r.menu.map((m,i) => `<div class="mi"><span class="th p-${r.id}"><span class="photo" style="background-image:url(${dishImg(r,i)})" role="img" aria-label="${m}"></span></span><span>${m}</span><span class="lead"></span><span class="muted">${money(r.price)}</span></div>`).join('')}
     </div>
 
     ${!buying ? `
@@ -1119,7 +1128,17 @@ document.addEventListener('keydown', e => {
 
 function fit(){ document.getElementById('stage').style.transform = `scale(${Math.min(1,(innerHeight-40)/890,(innerWidth-24)/420)})`; }
 addEventListener('resize', fit); fit();
-render('signup');
+
+/* Demo links for screenshots and presentations, e.g. app.html?demo=home or ?demo=restaurant&r=matsuri */
+const demo = new URLSearchParams(location.search);
+if (demo.has('demo')){
+  Object.assign(state.user, { name:demo.get('name') || 'Alex Rivera', email:'alex@miami.edu', username:'alexrivera', password:'demo-password' });
+  setLoc(DEMO);
+  const scr = demo.get('demo');
+  if (scr === 'restaurant'){ state.restId = R(demo.get('r')) ? demo.get('r') : 'matsuri'; state.size = 10; stack = ['home']; }
+  render(screens[scr] ? scr : 'home');
+  if (demo.has('bare')){ document.querySelector('.caption').remove(); document.head.insertAdjacentHTML('beforeend','<style>body{background:#000}body::before{display:none}</style>'); }
+} else render('signup');
 </script>
 </body>
 </html>
