@@ -1,2 +1,5 @@
 # Keep the business plan private
 *.pdf
+# Original full-size photos; the site uses resized copies in images/team
+pictures/
+.claude/
